@@ -33,7 +33,7 @@
             background-color: #16213e;
             border: 2px solid #0f3460;
             border-radius: 4px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
         }
 
         #ui-panel {
@@ -58,6 +58,7 @@
             font-size: 18px;
             color: #e94560;
             margin-top: 5px;
+            text-shadow: 0 0 5px rgba(233, 69, 96, 0.5);
         }
 
         #next-canvas {
@@ -77,6 +78,7 @@
             font-size: 14px;
             font-weight: bold;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            cursor: pointer;
         }
         .action-btn:active {
             transform: translateY(2px);
@@ -109,6 +111,7 @@
             -webkit-tap-highlight-color: transparent;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             transition: transform 0.1s, background-color 0.1s;
+            cursor: pointer;
         }
 
         .btn:active, .btn.active {
@@ -138,6 +141,7 @@
             color: #e94560;
             margin-bottom: 20px;
             font-size: 36px;
+            text-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
         }
 
         .overlay button {
@@ -150,6 +154,7 @@
             font-weight: bold;
             margin: 10px;
             min-width: 160px;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -196,7 +201,7 @@
         const nextCanvas = document.getElementById('next-canvas');
         const nextCtx = nextCanvas.getContext('2d');
 
-        const COLS = 11; // 增加一列
+        const COLS = 11;
         const ROWS = 20;
         let BLOCK_SIZE = 20;
 
@@ -209,16 +214,16 @@
         const overlayPause = document.getElementById('overlay-pause');
         const overlayGameover = document.getElementById('overlay-gameover');
 
-        // 颜色配置
+        // 颜色配置 - 鲜艳色彩
         const COLORS = [
             null,
-            '#00FFFF', // I
-            '#0000FF', // J
-            '#FFA500', // L
-            '#FFFF00', // O
-            '#00FF00', // S
-            '#800080', // T
-            '#FF0000'  // Z
+            '#00E5FF', // I (青色)
+            '#2962FF', // J (蓝色)
+            '#FF6D00', // L (橙色)
+            '#FFD600', // O (黄色)
+            '#00E676', // S (绿色)
+            '#D500F9', // T (紫色)
+            '#FF1744'  // Z (红色)
         ];
 
         // 方块形状
@@ -245,6 +250,76 @@
         let reqAnimId = null;
         let gameOver = false;
         let isPaused = false;
+
+        // --- 音效引擎 (Web Audio API) ---
+        let audioCtx = null;
+        
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // 基础发声器
+        function playTone(freq, type, duration, vol = 0.1) {
+            if (!audioCtx || audioCtx.state === 'suspended') return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        // 各动作对应的具体音效
+        const SFX = {
+            move: () => {
+                // 灵动轻快的滴答声
+                playTone(800, 'sine', 0.05, 0.08);
+            },
+            rotate: () => {
+                // 轻快的上升双音
+                playTone(600, 'triangle', 0.05, 0.1);
+                setTimeout(() => playTone(900, 'triangle', 0.08, 0.1), 30);
+            },
+            lock: () => {
+                // Pop 气泡破裂音效
+                if (!audioCtx || audioCtx.state !== 'running') return;
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.07);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(now + 0.1);
+            },
+            clear: () => {
+                // 清脆的消除和弦（C大调琶音）
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, index) => {
+                    setTimeout(() => {
+                        playTone(freq, 'sine', 0.3, 0.15);
+                    }, index * 40);
+                });
+            }
+        };
+        // ------------------------------
 
         // 动态调整画布大小
         function resize() {
@@ -336,6 +411,8 @@
                 levelEl.innerText = level;
                 dropInterval = Math.max(100, 1000 - (level - 1) * 100);
             }
+            
+            return linesCleared;
         }
 
         function triggerGameOver() {
@@ -343,31 +420,44 @@
             overlayGameover.style.display = 'flex';
         }
 
+        function lockPiece() {
+            merge();
+            const cleared = clearLines();
+            if (cleared > 0) {
+                SFX.clear(); // 触发消除音效（覆盖触底）
+            } else {
+                SFX.lock(); // 触发普通触底音效
+            }
+            
+            piece = nextPiece;
+            nextPiece = randomPiece();
+            drawNext();
+            if (checkCollision(piece.matrix, piece.pos)) {
+                triggerGameOver();
+            }
+        }
+
         function playerDrop() {
             if (isPaused || gameOver) return;
             piece.pos.y++;
             if (checkCollision(piece.matrix, piece.pos)) {
                 piece.pos.y--;
-                merge();
-                clearLines();
-                piece = nextPiece;
-                nextPiece = randomPiece();
-                drawNext();
-                if (checkCollision(piece.matrix, piece.pos)) {
-                    triggerGameOver();
-                }
+                lockPiece();
             }
             dropCounter = 0;
         }
 
         function playerHardDrop() {
             if (isPaused || gameOver) return;
+            let dropped = false;
             while (!checkCollision(piece.matrix, {x: piece.pos.x, y: piece.pos.y + 1})) {
                 piece.pos.y++;
                 score += 2; // 硬降得分奖励
+                dropped = true;
             }
             scoreEl.innerText = score;
-            playerDrop(); // 触发合并和消行
+            lockPiece();
+            dropCounter = 0;
         }
 
         function playerMove(dir) {
@@ -375,6 +465,8 @@
             piece.pos.x += dir;
             if (checkCollision(piece.matrix, piece.pos)) {
                 piece.pos.x -= dir;
+            } else {
+                SFX.move(); // 触发移动音效
             }
         }
 
@@ -392,21 +484,75 @@
                 }
             }
             piece.matrix = rotated;
+            SFX.rotate(); // 触发旋转音效
         }
 
-        // 绘制
+        // 绘制带高光和质感的 3D 方块
+        function draw3DBlock(context, x, y, size, color) {
+            const padding = 1; // 方块间隙
+            const actSize = size - padding * 2;
+            const px = x + padding;
+            const py = y + padding;
+            const edge = Math.max(2, actSize * 0.15); // 边缘倒角大小
+
+            // 1. 底色层
+            context.fillStyle = color;
+            context.fillRect(px, py, actSize, actSize);
+
+            // 2. 顶部高光 (斜面)
+            context.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            context.beginPath();
+            context.moveTo(px, py);
+            context.lineTo(px + actSize, py);
+            context.lineTo(px + actSize - edge, py + edge);
+            context.lineTo(px + edge, py + edge);
+            context.fill();
+
+            // 3. 左侧高光 (斜面)
+            context.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            context.beginPath();
+            context.moveTo(px, py);
+            context.lineTo(px + edge, py + edge);
+            context.lineTo(px + edge, py + actSize - edge);
+            context.lineTo(px, py + actSize);
+            context.fill();
+
+            // 4. 右侧阴影 (斜面)
+            context.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            context.beginPath();
+            context.moveTo(px + actSize, py);
+            context.lineTo(px + actSize, py + actSize);
+            context.lineTo(px + actSize - edge, py + actSize - edge);
+            context.lineTo(px + actSize - edge, py + edge);
+            context.fill();
+
+            // 5. 底部阴影 (斜面)
+            context.fillStyle = 'rgba(0, 0, 0, 0.4)';
+            context.beginPath();
+            context.moveTo(px, py + actSize);
+            context.lineTo(px + actSize, py + actSize);
+            context.lineTo(px + actSize - edge, py + actSize - edge);
+            context.lineTo(px + edge, py + actSize - edge);
+            context.fill();
+
+            // 6. 中心晶莹剔透的反光（顶部1/3处）
+            context.fillStyle = 'rgba(255, 255, 255, 0.25)';
+            context.beginPath();
+            context.rect(px + edge, py + edge, actSize - edge*2, (actSize - edge*2) * 0.4);
+            context.fill();
+        }
+
         function drawMatrix(matrix, offset, context = ctx, blockSize = BLOCK_SIZE) {
             matrix.forEach((row, y) => {
                 row.forEach((value, x) => {
                     if (value !== 0) {
-                        context.fillStyle = COLORS[value];
-                        context.fillRect((x + offset.x) * blockSize, (y + offset.y) * blockSize, blockSize, blockSize);
-                        context.strokeStyle = '#000';
-                        context.strokeRect((x + offset.x) * blockSize, (y + offset.y) * blockSize, blockSize, blockSize);
-                        
-                        // 3D 高光效果
-                        context.fillStyle = 'rgba(255,255,255,0.2)';
-                        context.fillRect((x + offset.x) * blockSize + 2, (y + offset.y) * blockSize + 2, blockSize - 4, blockSize / 3);
+                        draw3DBlock(
+                            context,
+                            (x + offset.x) * blockSize,
+                            (y + offset.y) * blockSize,
+                            blockSize,
+                            COLORS[value]
+                        );
                     }
                 });
             });
@@ -457,6 +603,8 @@
 
         // 状态控制
         function resetGame() {
+            initAudio(); // 初始化音频
+            
             board = createMatrix(COLS, ROWS);
             score = 0;
             lines = 0;
@@ -490,6 +638,7 @@
         }
 
         function resumeGame() {
+            initAudio(); // 恢复音频
             isPaused = false;
             overlayPause.style.display = 'none';
             lastTime = performance.now();
@@ -505,6 +654,7 @@
             const trigger = (e) => {
                 if (e) e.preventDefault();
                 if (gameOver || isPaused) return;
+                initAudio(); // 确保音频上下文已激活
                 action();
                 btn.classList.add('active');
             };
@@ -543,11 +693,24 @@
         bindBtn('btn-rotate', () => playerRotate(), false);
         bindBtn('btn-hard', () => playerHardDrop(), false);
 
+        // 键盘事件映射
+        document.addEventListener('keydown', (e) => {
+            if (gameOver || isPaused || overlayStart.style.display !== 'none') return;
+            initAudio();
+            switch(e.key) {
+                case 'ArrowLeft': playerMove(-1); break;
+                case 'ArrowRight': playerMove(1); break;
+                case 'ArrowDown': playerDrop(); break;
+                case 'ArrowUp': playerRotate(); break;
+                case ' ': playerHardDrop(); break;
+            }
+        });
+
         // 界面按钮绑定
         const bindClick = (id, fn) => {
             const el = document.getElementById(id);
             el.addEventListener('click', fn);
-            el.addEventListener('touchstart', (e) => { e.preventDefault(); fn(); });
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); fn(); }, {passive: false});
         };
 
         bindClick('start-btn', resetGame);
