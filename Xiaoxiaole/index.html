@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>幻彩消除 - 阶段制无尽版</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- 主菜单 -->
+        <div id="main-menu" class="screen active">
+            <h1>幻彩消除</h1>
+            <p class="subtitle">无尽挑战模式</p>
+            <button id="btn-start" class="btn primary">开始游戏</button>
+        </div>
+
+        <!-- 游戏主界面 -->
+        <div id="game-ui" class="screen">
+            <div class="header">
+                <div class="stats">
+                    <div class="stat-box">阶段: <span id="ui-stage">1</span></div>
+                    <div class="stat-box highlight">步数: <span id="ui-moves">20</span></div>
+                </div>
+                <div class="score-board">
+                    <div class="stat-box">分数: <span id="ui-score">0</span></div>
+                    <div class="stat-box">目标: <span id="ui-target">1500</span></div>
+                </div>
+                <button id="btn-pause" class="btn small">暂停</button>
+            </div>
+            <!-- 棋盘容器 -->
+            <div id="board"></div>
+            <!-- 屏幕中央提示文本容器 -->
+            <div id="floating-text"></div>
+        </div>
+
+        <!-- 暂停模态框 -->
+        <div id="pause-menu" class="modal hidden">
+            <div class="modal-content">
+                <h2>游戏暂停</h2>
+                <button id="btn-resume" class="btn primary">继续游���</button>
+                <button id="btn-quit" class="btn danger">返回主菜单</button>
+            </div>
+        </div>
+
+        <!-- 游戏结束模态框 -->
+        <div id="game-over" class="modal hidden">
+            <div class="modal-content">
+                <h2 id="go-title">阶段未达标</h2>
+                <p>最终得分: <span id="final-score">0</span></p>
+                <p>到达阶段: <span id="final-stage">1</span></p>
+                <button id="btn-restart" class="btn primary">再来一局</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 严格按依赖顺序加载 -->
+    <script src="config.js"></script>
+    <script src="utils.js"></script>
+    <script src="audio.js"></script>
+    <script src="board.js"></script>
+    <script src="ui.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
