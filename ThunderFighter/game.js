@@ -58,7 +58,7 @@ function playSound(type) {
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(300, now);
         osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
-        gainNode.gain.setValueAtTime(0.2, now); // 声音更大更沉
+        gainNode.gain.setValueAtTime(0.2, now); 
         gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
         osc.start(now); osc.stop(now + 0.3);
     } else if (type === 'explode') {
@@ -103,12 +103,17 @@ function playSound(type) {
 // ==========================================
 // 游戏状态与输入
 // ==========================================
-let gameState = 'playing'; 
+let gameState = 'menu'; // menu, playing, paused, gameover
 let score = 0;
 let stageLevel = 1; 
 let bossMode = false;
 let bossDefeatedCount = 0;
 let nextBossScore = 10000;
+
+// 新增得分与保底机制变量
+let scoreMultiplier = 1.0; 
+let lastPowerupScoreThreshold = 0; 
+let guaranteedPowerup = false; 
 
 const keys = {};
 const mouse = { x: W/2, y: H/2, isDown: false };
@@ -117,9 +122,7 @@ window.addEventListener('keydown', e => {
     keys[e.key.toLowerCase()] = true; 
     if(audioCtx.state==='suspended') audioCtx.resume();
 });
-window.addEventListener('keyup', e => { 
-    keys[e.key.toLowerCase()] = false; 
-});
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
 window.addEventListener('mousedown', () => { mouse.isDown = true; if(audioCtx.state==='suspended') audioCtx.resume(); });
 window.addEventListener('mouseup', () => { mouse.isDown = false; });
@@ -127,6 +130,18 @@ window.addEventListener('touchstart', e => { mouse.x = e.touches[0].clientX; mou
 window.addEventListener('touchmove', e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; });
 window.addEventListener('touchend', () => { mouse.isDown = false; });
 
+// 主菜单按钮
+document.getElementById('startBtn').onclick = () => {
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    document.getElementById('mainMenu').style.display = 'none';
+    document.getElementById('hud').style.display = 'block';
+    document.getElementById('pauseBtn').style.display = 'block';
+    initGame();
+    gameState = 'playing';
+    lastTime = performance.now();
+};
+
+// 暂停与恢复
 document.getElementById('pauseBtn').onclick = () => {
     if (gameState === 'playing') { gameState = 'paused'; document.getElementById('pauseMenu').style.display = 'flex'; }
 };
@@ -137,6 +152,8 @@ document.getElementById('resumeBtn').onclick = () => {
         lastTime = performance.now(); 
     }
 };
+
+// 重新开始与返回菜单
 const restartGame = () => {
     initGame(); gameState = 'playing';
     document.getElementById('pauseMenu').style.display = 'none';
@@ -145,8 +162,25 @@ const restartGame = () => {
     document.getElementById('warningScreen').style.display = 'none';
     lastTime = performance.now();
 };
+
+const returnToMenu = () => {
+    gameState = 'menu';
+    document.getElementById('pauseMenu').style.display = 'none';
+    document.getElementById('gameOverMenu').style.display = 'none';
+    document.getElementById('bossUI').style.display = 'none';
+    document.getElementById('warningScreen').style.display = 'none';
+    document.getElementById('hud').style.display = 'none';
+    document.getElementById('pauseBtn').style.display = 'none';
+    document.getElementById('mainMenu').style.display = 'flex';
+    // 清空游戏对象
+    [bulletPool, particlePool, itemPool, enemyPool].forEach(p => p.items.forEach(i => i.active = false));
+    boss.active = false;
+};
+
 document.getElementById('restartBtnPause').onclick = restartGame;
 document.getElementById('restartBtn').onclick = restartGame;
+document.getElementById('menuBtnPause').onclick = returnToMenu;
+document.getElementById('menuBtnOver').onclick = returnToMenu;
 document.getElementById('muteBtn').onclick = (e) => {
     isMuted = !isMuted;
     e.target.innerText = `音效: ${isMuted ? '关' : '开'}`;
@@ -285,7 +319,7 @@ class Player {
         this.shieldActive = false;
         this.shieldTime = 0;
         this.hitTimer = 0; 
-        this.bossHitSoundCooldown = 0; // Boss接触伤害的音效冷却
+        this.bossHitSoundCooldown = 0; 
     }
     update(dt) {
         let dx = 0, dy = 0;
@@ -319,13 +353,11 @@ class Player {
         if(this.hitTimer > 0) this.hitTimer -= dt;
         if(this.bossHitSoundCooldown > 0) this.bossHitSoundCooldown -= dt;
 
-        // 自动射击
         this.shootCooldown -= dt;
         if(this.shootCooldown <= 0) {
             this.shoot();
         }
 
-        // 7级：主机间歇性激光自动攻击
         if (this.power >= 7) {
             if (this.laserActiveTime > 0) {
                 this.laserActiveTime -= dt;
@@ -340,7 +372,6 @@ class Player {
             }
         }
 
-        // 8级：僚机间歇性小激光自动攻击
         if (this.power >= 8) {
             if (this.wingLaserActiveTime > 0) {
                 this.wingLaserActiveTime -= dt;
@@ -429,7 +460,7 @@ class Player {
         this.power = Math.max(1, this.power - 1);
         playSound('player_hit');
         createExplosion(this.x, this.y, '#f00', 5);
-        this.hitTimer = 0.1; // 玩家受击白闪
+        this.hitTimer = 0.1; 
         if(this.hp <= 0) gameOver();
     }
     draw(ctx) {
@@ -638,11 +669,18 @@ class Enemy {
         playSound('hit');
         if(this.hp <= 0) {
             this.active = false;
-            score += (this.type + 1) * 10 + 60; 
+            let baseScore = (this.type + 1) * 10 + 60; 
+            score += Math.floor(baseScore * scoreMultiplier); 
             createExplosion(this.x, this.y, this.color, 10);
-            if(this.type === 2) { 
+            
+            // 保底掉落触发
+            if(guaranteedPowerup) {
+                let item = itemPool.get(); if(item) item.spawn(this.x, this.y, 0); 
+                guaranteedPowerup = false;
+            } else if(this.type === 2) { 
                 let item = itemPool.get(); if(item) item.spawn(this.x, this.y, 0); 
             }
+            
             checkDifficulty();
         }
     }
@@ -768,7 +806,7 @@ class Boss {
         if(this.hp <= 0) {
             this.active = false;
             createExplosion(this.x, this.y, '#f00', 100);
-            score += 1000; 
+            score += Math.floor(1000 * scoreMultiplier); 
             bossMode = false; 
             bossDefeatedCount++;
             
@@ -856,6 +894,16 @@ function spawnEnemies(dt) {
 }
 
 function checkDifficulty() {
+    // 更新难度与系数 (系数随关卡阶段提升20%)
+    scoreMultiplier = 1 + (stageLevel - 1) * 0.2;
+    
+    // 检查每 5000 分的保底机制
+    if(score - lastPowerupScoreThreshold >= 5000) {
+        guaranteedPowerup = true;
+        // 向下取整获取里程碑
+        lastPowerupScoreThreshold = Math.floor(score / 5000) * 5000;
+    }
+
     if(score >= nextBossScore && !bossMode) {
         bossMode = true;
         
@@ -914,7 +962,8 @@ function gameLoop(now) {
     if(dt > 0.1) dt = 0.1;
 
     if(gameState !== 'playing') {
-        drawBackground(0); 
+        let dtForBg = (gameState === 'menu' || gameState === 'gameover') ? dt : 0;
+        drawBackground(dtForBg); 
         return;
     }
 
@@ -963,10 +1012,9 @@ function gameLoop(now) {
              player.hp -= 1 * dt * 60; 
              player.hitTimer = 0.1;
              
-             // 限制因持续伤害导致受击音效频繁重叠
              if (player.bossHitSoundCooldown <= 0) {
                  playSound('player_hit');
-                 player.bossHitSoundCooldown = 0.3; // 冷却 0.3 秒
+                 player.bossHitSoundCooldown = 0.3; 
              }
              
              updateHUD();
@@ -981,23 +1029,16 @@ function gameLoop(now) {
     boss.draw(ctx);
     player.draw(ctx);
     
-//     // 渲染低血量屏幕边缘红光闪烁
-//     if (player.hp <= 30 && player.hp > 0) {
-//     let pulseAlpha = 0.2 + Math.sin(now / 150) * 0.15;
-//     ctx.save();
-//     // 阴影模糊实现边缘扩散/光晕效果
-//     ctx.shadowBlur = 75;               // 数值越大边缘越柔和、光晕越大
-//     ctx.shadowColor = 'rgba(255, 0, 0, 0.8)';
-//     ctx.fillStyle = `rgba(255, 0, 0, ${pulseAlpha})`;
-
-//     const edgeWidth = 5;              // 左右边缘宽度（可调小以减细红光）
-//     // 左边缘
-//     ctx.fillRect(0, 0, edgeWidth, H);
-//     // 右边缘
-//     ctx.fillRect(W - edgeWidth, 0, edgeWidth, H);
-
-//     ctx.restore();
-// }
+    if (player.hp <= 30 && player.hp > 0) {
+        let pulseAlpha = 0.2 + Math.sin(now / 150) * 0.15; 
+        ctx.save();
+        ctx.lineWidth = 30;
+        ctx.strokeStyle = `rgba(255, 0, 0, ${pulseAlpha})`;
+        ctx.shadowBlur = 40;
+        ctx.shadowColor = '#f00';
+        ctx.strokeRect(15, 15, W - 30, H - 30);
+        ctx.restore();
+    }
     
     updateHUD();
 }
@@ -1011,12 +1052,14 @@ function gameOver() {
 function initGame() {
     score = 0; stageLevel = 1; bossMode = false; 
     bossDefeatedCount = 0; nextBossScore = 10000;
+    scoreMultiplier = 1.0;
+    lastPowerupScoreThreshold = 0;
+    guaranteedPowerup = false;
     player.reset();
     [bulletPool, particlePool, itemPool, enemyPool].forEach(p => p.items.forEach(i => i.active = false));
     boss.active = false;
     updateHUD();
 }
 
-// 启动
-initGame();
+// 初始化状态不直接启动，等待按键，但开启循环渲染背景
 requestAnimationFrame(gameLoop);
