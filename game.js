@@ -21,7 +21,8 @@ function initStars() {
             x: Math.random() * W,
             y: Math.random() * H,
             size: Math.random() * 2 + 0.5,
-            alpha: Math.random() * 0.8 + 0.2
+            alpha: Math.random() * 0.8 + 0.2,
+            speed: Math.random() * 100 + 50 // 赋予向下的不同移动速度营造视差
         });
     }
 }
@@ -119,19 +120,31 @@ window.addEventListener('touchstart', e => { mouse.x = e.touches[0].clientX; mou
 window.addEventListener('touchmove', e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; });
 window.addEventListener('touchend', () => { mouse.isDown = false; });
 
+// 修复：UI 按钮绑定
 document.getElementById('pauseBtn').onclick = () => {
-    if (gameState === 'playing') { gameState = 'paused'; document.getElementById('pauseMenu').style.display = 'flex'; }
+    if (gameState === 'playing') { 
+        gameState = 'paused'; 
+        document.getElementById('pauseMenu').style.display = 'flex'; 
+    }
 };
+
 document.getElementById('resumeBtn').onclick = () => {
-    gameState = 'playing'; document.getElementById('pauseMenu').style.display = 'none';
+    if (gameState === 'paused') {
+        gameState = 'playing'; 
+        document.getElementById('pauseMenu').style.display = 'none';
+        lastTime = performance.now(); // 极其重要：修复由于 dt 导致的时间跨越瞬间死亡问题
+    }
 };
+
 const restartGame = () => {
     initGame(); gameState = 'playing';
     document.getElementById('pauseMenu').style.display = 'none';
     document.getElementById('gameOverMenu').style.display = 'none';
     document.getElementById('bossUI').style.display = 'none';
     document.getElementById('warningScreen').style.display = 'none';
+    lastTime = performance.now();
 };
+
 document.getElementById('restartBtnPause').onclick = restartGame;
 document.getElementById('restartBtn').onclick = restartGame;
 document.getElementById('muteBtn').onclick = (e) => {
@@ -235,7 +248,6 @@ class Bullet {
                 this.vx = Math.cos(newAngle) * speed;
                 this.vy = Math.sin(newAngle) * speed;
                 
-                // 导弹尾焰
                 if(Math.random() < 0.3) {
                     let p = particlePool.get();
                     if(p) p.spawn(this.x, this.y, -this.vx*0.2, -this.vy*0.2, '#f80', 0.2, 1.5);
@@ -624,7 +636,7 @@ class Enemy {
         playSound('hit');
         if(this.hp <= 0) {
             this.active = false;
-            // 基础得分 + 60 (原来的+20然后再加40)
+            // 基础得分 + 60
             score += (this.type + 1) * 10 + 60; 
             createExplosion(this.x, this.y, this.color, 10);
             if(this.type === 2) { 
@@ -808,7 +820,11 @@ function spawnEnemies(dt) {
         
         if(activeCount < maxEnemies) {
             let type = Math.floor(Math.random() * 6);
-            if(Math.random() < 0.002) type = 2; 
+            
+            // 修复: 降低补给出现概率（不到 1%），且当原本随到类型2时，95%几率被替换掉
+            if (type === 2 && Math.random() > 0.05) {
+                type = [0, 1, 3, 4, 5][Math.floor(Math.random() * 5)];
+            }
             
             if([2,3,5].includes(type) && enemyPool.items.some(e => e.active && [2,3,5].includes(e.type))) {
                 type = Math.random() < 0.5 ? 0 : 1;
@@ -850,12 +866,20 @@ function updateHUD() {
 // ==========================================
 // 渲染与主循环
 // ==========================================
-function drawBackground() {
+function drawBackground(dt) {
     ctx.fillStyle = '#000'; 
     ctx.fillRect(0, 0, W, H);
     
+    // 实现背景的滚动
     ctx.fillStyle = '#fff';
     stars.forEach(star => {
+        if(gameState === 'playing') {
+            star.y += star.speed * dt;
+            if(star.y > H) {
+                star.y = 0;
+                star.x = Math.random() * W;
+            }
+        }
         ctx.globalAlpha = star.alpha;
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.size, 0, Math.PI*2);
@@ -871,9 +895,12 @@ function gameLoop(now) {
     lastTime = now;
     if(dt > 0.1) dt = 0.1;
 
-    if(gameState !== 'playing') return;
+    if(gameState !== 'playing') {
+        drawBackground(0); // 暂停时背景停止流动
+        return;
+    }
 
-    drawBackground();
+    drawBackground(dt); // 播放中背景随时间流动
 
     player.update(dt);
     spawnEnemies(dt);
