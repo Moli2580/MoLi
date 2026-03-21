@@ -981,23 +981,23 @@ function gameLoop(now) {
     boss.draw(ctx);
     player.draw(ctx);
     
-    // 渲染低血量屏幕边缘红光闪烁
-    if (player.hp <= 30 && player.hp > 0) {
-    let pulseAlpha = 0.2 + Math.sin(now / 150) * 0.15;
-    ctx.save();
-    // 阴影模糊实现边缘扩散/光晕效果
-    ctx.shadowBlur = 75;               // 数值越大边缘越柔和、光晕越大
-    ctx.shadowColor = 'rgba(255, 0, 0, 0.8)';
-    ctx.fillStyle = `rgba(255, 0, 0, ${pulseAlpha})`;
+//     // 渲染低血量屏幕边缘红光闪烁
+//     if (player.hp <= 30 && player.hp > 0) {
+//     let pulseAlpha = 0.2 + Math.sin(now / 150) * 0.15;
+//     ctx.save();
+//     // 阴影模糊实现边缘扩散/光晕效果
+//     ctx.shadowBlur = 75;               // 数值越大边缘越柔和、光晕越大
+//     ctx.shadowColor = 'rgba(255, 0, 0, 0.8)';
+//     ctx.fillStyle = `rgba(255, 0, 0, ${pulseAlpha})`;
 
-    const edgeWidth = 5;              // 左右边缘宽度（可调小以减细红光）
-    // 左边缘
-    ctx.fillRect(0, 0, edgeWidth, H);
-    // 右边缘
-    ctx.fillRect(W - edgeWidth, 0, edgeWidth, H);
+//     const edgeWidth = 5;              // 左右边缘宽度（可调小以减细红光）
+//     // 左边缘
+//     ctx.fillRect(0, 0, edgeWidth, H);
+//     // 右边缘
+//     ctx.fillRect(W - edgeWidth, 0, edgeWidth, H);
 
-    ctx.restore();
-}
+//     ctx.restore();
+// }
     
     updateHUD();
 }
