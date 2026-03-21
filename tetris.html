@@ -95,7 +95,7 @@
       box-shadow: 0 2px 3px rgba(0,0,0,0.3);
     }
 
-    /* 移动端控制区（保持不变） */
+    /* 移动端控制区 */
     #controls {
       height: 180px;
       display: grid;
@@ -137,6 +137,7 @@
     #btn-down { grid-column: 2; grid-row: 2; font-size: 20px;}
     #btn-hard { grid-column: 3; grid-row: 2; font-size: 20px;}
 
+    /* 遮罩层及菜单 */
     .overlay {
       position: absolute;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -150,25 +151,35 @@
 
     .overlay h1 {
       color: var(--accent);
-      margin-bottom: 20px;
+      margin-bottom: 30px;
       font-size: 36px;
       text-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
     }
 
     .overlay button {
       padding: 15px 30px;
-      font-size: 20px;
+      font-size: 18px;
       background-color: var(--accent);
       color: white;
       border: none;
       border-radius: 8px;
       font-weight: bold;
-      margin: 10px;
-      min-width: 160px;
+      margin: 8px;
+      min-width: 180px;
       cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+      transition: transform 0.1s, background-color 0.2s;
+    }
+    
+    .overlay button:active {
+      transform: translateY(2px);
     }
 
-    /* PC 左侧按键提示（默认隐藏，PC 下显示） */
+    .overlay button.secondary {
+      background-color: var(--panel2);
+    }
+
+    /* PC 左侧按键提示 */
     #pc-hints {
       display: none;
       width: 220px;
@@ -183,6 +194,7 @@
       margin: 0 0 10px 0;
       font-size: 16px;
       color: #fff;
+      text-align: center;
     }
     .hint-row{
       display: flex;
@@ -223,7 +235,7 @@
 
   <div id="game-area">
     <div id="pc-hints" aria-hidden="true">
-      <h3>PC 按键提示</h3>
+      <h3>PC 按键提���</h3>
       <div class="hint-row"><span class="keycap">A</span><span>向左</span></div>
       <div class="hint-row"><span class="keycap">D</span><span>向右</span></div>
       <div class="hint-row"><span class="keycap">W</span><span>旋转</span></div>
@@ -242,20 +254,26 @@
       <button class="action-btn" id="pause-btn">⏸ 暂停</button>
     </div>
 
+    <!-- 主菜单 -->
     <div id="overlay-start" class="overlay">
       <h1>俄罗斯方块</h1>
-      <button id="start-btn">开始游戏</button>
+      <button id="start-normal-btn">普通模式</button>
+      <button id="start-easy-btn" class="secondary">简单模式 (带虚影)</button>
     </div>
 
+    <!-- 暂停菜单 -->
     <div id="overlay-pause" class="overlay" style="display: none;">
       <h1>游戏暂停</h1>
       <button id="resume-btn">继续游戏</button>
-      <button id="restart-btn">重新开始</button>
+      <button id="restart-btn" class="secondary">重新开始</button>
+      <button id="menu-btn-pause" class="secondary">返回菜单</button>
     </div>
 
+    <!-- 游戏结束菜单 -->
     <div id="overlay-gameover" class="overlay" style="display: none;">
       <h1>游戏结束</h1>
       <button id="retry-btn">再来一局</button>
+      <button id="menu-btn-gameover" class="secondary">返回菜单</button>
     </div>
   </div>
 
@@ -287,13 +305,13 @@
 
     const COLORS = [
       null,
-      '#00E5FF',
-      '#2962FF',
-      '#FF6D00',
-      '#FFD600',
-      '#00E676',
-      '#D500F9',
-      '#FF1744'
+      '#00E5FF', // I
+      '#2962FF', // J
+      '#FF6D00', // L
+      '#FFD600', // O
+      '#00E676', // S
+      '#D500F9', // T
+      '#FF1744'  // Z
     ];
 
     const SHAPES = [
@@ -322,17 +340,19 @@
 
     let gameOver = false;
     let isPaused = false;
+    
+    // 游戏模式: 'normal' 或 'easy'
+    let gameMode = 'normal'; 
 
     const IS_PC = matchMedia('(hover: hover) and (pointer: fine)').matches;
 
     // ======= 消除动画状态 =======
-    // 当有行要消除时：先“闪/收缩/淡出”，再真正移除行并下落
     let isClearing = false;
     let clearAnim = {
-      rows: [],         // 要消除的行索引（board 中的 y）
+      rows: [],
       start: 0,
-      duration: 220,    // ms
-      phase: 0          // 0..1
+      duration: 220,
+      phase: 0
     };
 
     // ===== 音效 =====
@@ -464,7 +484,6 @@
       });
     }
 
-    // 只负责检测哪些行要消除，不做 splice
     function findFullRows() {
       const full = [];
       for (let y = ROWS - 1; y >= 0; --y) {
@@ -477,9 +496,7 @@
       return full;
     }
 
-    // 真正消除行 + 下落（动画结束后调用）
     function applyClearRows(rowsToClear) {
-      // 从下往上处理，避免索引错乱（rowsToClear 可能无序，先排序从小到大）
       const rows = rowsToClear.slice().sort((a,b)=>a-b);
       for (let i = 0; i < rows.length; i++) {
         const y = rows[i];
@@ -513,18 +530,12 @@
 
       const rowsToClear = findFullRows();
       if (rowsToClear.length > 0) {
-        // 开启动画：此时不立刻 splice，不立刻下落
         isClearing = true;
         clearAnim.rows = rowsToClear;
         clearAnim.start = performance.now();
         clearAnim.phase = 0;
-
-        // 消除音效在动画开始时触发（更有反馈）
         SFX.clear();
-
-        // 注意：piece/nextPiece 的推进放到动画完成后
       } else {
-        // 没有消除：正常触底音效 + 直接推进
         SFX.lock();
         piece = nextPiece;
         nextPiece = randomPiece();
@@ -534,7 +545,7 @@
     }
 
     function playerDrop() {
-      if (isPaused || gameOver || isClearing) return;
+      if (isPaused || gameOver || isClearing || !piece) return;
       piece.pos.y++;
       if (checkCollision(piece.matrix, piece.pos)) {
         piece.pos.y--;
@@ -544,7 +555,7 @@
     }
 
     function playerHardDrop() {
-      if (isPaused || gameOver || isClearing) return;
+      if (isPaused || gameOver || isClearing || !piece) return;
       while (!checkCollision(piece.matrix, { x: piece.pos.x, y: piece.pos.y + 1 })) {
         piece.pos.y++;
         score += 2;
@@ -555,7 +566,7 @@
     }
 
     function playerMove(dir) {
-      if (isPaused || gameOver || isClearing) return;
+      if (isPaused || gameOver || isClearing || !piece) return;
       piece.pos.x += dir;
       if (checkCollision(piece.matrix, piece.pos)) {
         piece.pos.x -= dir;
@@ -565,7 +576,7 @@
     }
 
     function playerRotate() {
-      if (isPaused || gameOver || isClearing) return;
+      if (isPaused || gameOver || isClearing || !piece) return;
       const rotated = rotateMatrix(piece.matrix);
       const pos = piece.pos.x;
       let offset = 1;
@@ -587,17 +598,14 @@
       const actSize = (size - padding * 2) * scale;
       const px = x + padding + ((size - padding * 2) - actSize) / 2;
       const py = y + padding + ((size - padding * 2) - actSize) / 2;
-
       const edge = Math.max(2, actSize * 0.15);
 
       context.save();
       context.globalAlpha = alpha;
 
-      // 底色
       context.fillStyle = color;
       context.fillRect(px, py, actSize, actSize);
 
-      // 顶部高光
       context.fillStyle = 'rgba(255, 255, 255, 0.40)';
       context.beginPath();
       context.moveTo(px, py);
@@ -606,7 +614,6 @@
       context.lineTo(px + edge, py + edge);
       context.fill();
 
-      // 左侧高光
       context.fillStyle = 'rgba(255, 255, 255, 0.20)';
       context.beginPath();
       context.moveTo(px, py);
@@ -615,7 +622,6 @@
       context.lineTo(px, py + actSize);
       context.fill();
 
-      // 右侧阴影
       context.fillStyle = 'rgba(0, 0, 0, 0.20)';
       context.beginPath();
       context.moveTo(px + actSize, py);
@@ -624,7 +630,6 @@
       context.lineTo(px + actSize - edge, py + edge);
       context.fill();
 
-      // 底部阴影
       context.fillStyle = 'rgba(0, 0, 0, 0.40)';
       context.beginPath();
       context.moveTo(px, py + actSize);
@@ -633,13 +638,11 @@
       context.lineTo(px + edge, py + actSize - edge);
       context.fill();
 
-      // 中心反光
       context.fillStyle = 'rgba(255, 255, 255, 0.25)';
       context.beginPath();
       context.rect(px + edge, py + edge, actSize - edge * 2, (actSize - edge * 2) * 0.4);
       context.fill();
 
-      // 外描边
       context.strokeStyle = 'rgba(0,0,0,0.55)';
       context.lineWidth = 1;
       context.strokeRect(px, py, actSize, actSize);
@@ -691,21 +694,14 @@
       drawMatrix(nextPiece.matrix, { x: offsetX, y: offsetY }, nextCtx, bSize);
     }
 
-    // 绘制棋盘时，如果正在消除，把那几行做动画效果（闪/缩/淡）
     function drawBoardWithClearAnim() {
       const clearingRows = new Set(clearAnim.rows);
-      const t = clearAnim.phase; // 0..1
-      // 缓动：更顺滑
+      const t = clearAnim.phase; 
       const easeOut = 1 - Math.pow(1 - t, 3);
+      const flash = Math.sin(Math.min(1, t * 2) * Math.PI) * 0.35; 
+      const alpha = (t < 0.55) ? 1 : (1 - (t - 0.55) / 0.45); 
+      const scale = (t < 0.55) ? 1 : (1 - (t - 0.55) / 0.45) * 0.55 + 0.45; 
 
-      // 视觉策略：
-      // - 前半段闪一下变亮
-      // - 后半段收缩 + 淡出
-      const flash = Math.sin(Math.min(1, t * 2) * Math.PI) * 0.35; // 0..0.35..0
-      const alpha = (t < 0.55) ? 1 : (1 - (t - 0.55) / 0.45); // 1 -> 0
-      const scale = (t < 0.55) ? 1 : (1 - (t - 0.55) / 0.45) * 0.55 + 0.45; // 1 -> 0.45
-
-      // 先画非消除行正常块
       for (let y = 0; y < ROWS; y++) {
         for (let x = 0; x < COLS; x++) {
           const v = board[y][x];
@@ -714,11 +710,9 @@
           if (!clearingRows.has(y)) {
             draw3DBlock(ctx, x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, COLORS[v], 1, 1);
           } else {
-            // 消除行：闪光叠加（通过 alpha + 额外白色覆盖实现）
             const a = Math.max(0, alpha);
             draw3DBlock(ctx, x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, COLORS[v], a, scale);
 
-            // 叠加闪白层
             ctx.save();
             ctx.globalAlpha = (a * 0.55) + flash;
             ctx.fillStyle = 'rgba(255,255,255,0.85)';
@@ -729,7 +723,6 @@
         }
       }
 
-      // 额外：给整行加一条光带
       ctx.save();
       ctx.globalAlpha = 0.25 * (1 - easeOut);
       ctx.fillStyle = 'rgba(255,255,255,0.7)';
@@ -737,6 +730,39 @@
         const yy = y * BLOCK_SIZE;
         ctx.fillRect(0, yy + BLOCK_SIZE * 0.35, COLS * BLOCK_SIZE, BLOCK_SIZE * 0.25);
       }
+      ctx.restore();
+    }
+
+    // 画简单模式的触底虚影
+    function drawGhost() {
+      if (gameMode !== 'easy' || !piece || isClearing || gameOver || isPaused) return;
+
+      const ghostPos = { x: piece.pos.x, y: piece.pos.y };
+      
+      // 不断下落直到碰撞，找到真实触底点
+      while (!checkCollision(piece.matrix, { x: ghostPos.x, y: ghostPos.y + 1 })) {
+        ghostPos.y++;
+      }
+
+      ctx.save();
+      ctx.lineWidth = 2;
+      piece.matrix.forEach((row, y) => {
+        row.forEach((value, x) => {
+          if (value !== 0) {
+            const px = (x + ghostPos.x) * BLOCK_SIZE;
+            const py = (y + ghostPos.y) * BLOCK_SIZE;
+            const pad = 1;
+            
+            // 淡淡的白色边框
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.strokeRect(px + pad, py + pad, BLOCK_SIZE - pad*2, BLOCK_SIZE - pad*2);
+            
+            // 极浅的内部填充，增加存在感但保持“虚”的质感
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.fillRect(px + pad, py + pad, BLOCK_SIZE - pad*2, BLOCK_SIZE - pad*2);
+          }
+        });
+      });
       ctx.restore();
     }
 
@@ -750,32 +776,27 @@
         drawMatrix(board, { x: 0, y: 0 });
       }
 
-      // 清除动画期间：当前下落块已锁定（merge 到 board 里），不再单独画 piece
-      if (piece && !isClearing) drawMatrix(piece.matrix, piece.pos);
+      if (piece && !isClearing) {
+        drawGhost(); // 先画虚影
+        drawMatrix(piece.matrix, piece.pos); // 再画真实块覆盖在上面
+      }
     }
 
     function update(time = 0) {
-      if (gameOver || isPaused) return;
+      if (gameOver || isPaused || overlayStart.style.display !== 'none') return;
 
       const deltaTime = time - lastTime;
       lastTime = time;
 
-      // 处理消除动画
       if (isClearing) {
         const elapsed = time - clearAnim.start;
         clearAnim.phase = Math.min(1, elapsed / clearAnim.duration);
 
-        // 动画结束：真正移除行、更新分数、推进新方块、继续游戏
         if (clearAnim.phase >= 1) {
           const clearedCount = clearAnim.rows.length;
-
-          // 真正移除行 + 下落
           applyClearRows(clearAnim.rows);
-
-          // 计分/等级
           updateScoreAndLevel(clearedCount);
 
-          // 推进方块
           isClearing = false;
           clearAnim.rows = [];
           clearAnim.phase = 0;
@@ -789,7 +810,6 @@
             draw();
             return;
           }
-
           dropCounter = 0;
         }
 
@@ -803,6 +823,12 @@
 
       draw();
       reqAnimId = requestAnimationFrame(update);
+    }
+
+    // ===== 状态控制与主菜单逻辑 =====
+    function startGame(mode) {
+      gameMode = mode;
+      resetGame();
     }
 
     function resetGame() {
@@ -824,8 +850,6 @@
 
       gameOver = false;
       isPaused = false;
-
-      // 清除动画状态
       isClearing = false;
       clearAnim.rows = [];
       clearAnim.phase = 0;
@@ -839,6 +863,20 @@
 
       if (reqAnimId) cancelAnimationFrame(reqAnimId);
       update();
+    }
+
+    function returnToMenu() {
+      isPaused = true;
+      if (reqAnimId) cancelAnimationFrame(reqAnimId);
+      
+      // 清空棋盘画布用于做主菜单背景
+      board = createMatrix(COLS, ROWS);
+      piece = null;
+      draw(); 
+
+      overlayPause.style.display = 'none';
+      overlayGameover.style.display = 'none';
+      overlayStart.style.display = 'flex'; // 显示主菜单
     }
 
     function togglePause() {
@@ -902,22 +940,30 @@
     // 界面按钮绑定
     const bindClick = (id, fn) => {
       const el = document.getElementById(id);
+      if(!el) return;
       el.addEventListener('click', fn);
       el.addEventListener('touchstart', (e) => { e.preventDefault(); fn(); }, { passive: false });
     };
 
-    bindClick('start-btn', resetGame);
-    bindClick('retry-btn', resetGame);
-    bindClick('pause-btn', togglePause);
+    bindClick('start-normal-btn', () => startGame('normal'));
+    bindClick('start-easy-btn', () => startGame('easy'));
+    
     bindClick('resume-btn', resumeGame);
     bindClick('restart-btn', resetGame);
+    bindClick('menu-btn-pause', returnToMenu);
 
-    // PC 键盘控制：A/D/W/S/Space + P 暂停
+    bindClick('retry-btn', resetGame);
+    bindClick('menu-btn-gameover', returnToMenu);
+
+    bindClick('pause-btn', togglePause);
+
+    // PC 键盘控制
     document.addEventListener('keydown', (e) => {
+      // 位于主菜单时，允许快捷键开始普通模式
       if (overlayStart.style.display !== 'none') {
         if (e.code === 'Space' || e.key === 'Enter') {
           e.preventDefault();
-          resetGame();
+          startGame('normal');
         }
         return;
       }
@@ -932,7 +978,6 @@
         return;
       }
 
-      // 消除动画期间禁止输入（避免错位）
       if (isClearing) return;
 
       initAudio();
@@ -953,19 +998,17 @@
         return;
       }
 
-      // 兼容方向键（可选）
       if (k === 'ArrowLeft') return playerMove(-1);
       if (k === 'ArrowRight') return playerMove(1);
       if (k === 'ArrowUp') return playerRotate();
       if (k === 'ArrowDown') return playerDrop();
     });
 
-    // 初始化
+    // 初始化显示主菜单
     board = createMatrix(COLS, ROWS);
     resize();
-    nextPiece = randomPiece();
-    drawNext();
-    draw();
+    draw(); 
+    // 不开始循环 update，等待用户点击按钮
   </script>
 </body>
 </html>
