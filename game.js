@@ -107,11 +107,10 @@ const mouse = { x: W/2, y: H/2, isDown: false };
 
 window.addEventListener('keydown', e => { 
     keys[e.key.toLowerCase()] = true; 
-    if(e.code === 'Space') keys['space'] = true;
+    if(audioCtx.state==='suspended') audioCtx.resume();
 });
 window.addEventListener('keyup', e => { 
     keys[e.key.toLowerCase()] = false; 
-    if(e.code === 'Space') keys['space'] = false;
 });
 window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
 window.addEventListener('mousedown', () => { mouse.isDown = true; if(audioCtx.state==='suspended') audioCtx.resume(); });
@@ -304,13 +303,13 @@ class Player {
             if(this.shieldTime <= 0) this.shieldActive = false;
         }
 
-        // ========== 自动攻击（无需按住任何键） ==========
+        // 自动射击
         this.shootCooldown -= dt;
         if(this.shootCooldown <= 0) {
             this.shoot();
         }
 
-        // 7级：主机间歇性激光（自动触发）
+        // 7级：主机间歇性激光自动攻击
         if (this.power >= 7) {
             if (this.laserActiveTime > 0) {
                 this.laserActiveTime -= dt;
@@ -325,7 +324,7 @@ class Player {
             }
         }
 
-        // 8级：僚机间歇性小激光（自动触发）
+        // 8级：僚机间歇性小激光自动攻击
         if (this.power >= 8) {
             if (this.wingLaserActiveTime > 0) {
                 this.wingLaserActiveTime -= dt;
@@ -625,14 +624,8 @@ class Enemy {
         playSound('hit');
         if(this.hp <= 0) {
             this.active = false;
-            // ========== 修改敌机得分：基础分提高 + 随关卡阶段加成 ==========
-            const baseScoreList = [40, 70, 180, 150, 120, 220]; // 原先是 [30,50,120,100,80,150] 提升约30%
-            let addScore = baseScoreList[this.type] + Math.floor(stageLevel * 10);
-            score += addScore;
-            // 可选：飘分特效（简单文字粒子）
-            let p = particlePool.get();
-            if(p) p.spawn(this.x, this.y, (Math.random()-0.5)*50, -30, '#fff', 0.6, 6);
-            // ============================================================
+            // 基础得分 + 60 (原来的+20然后再加40)
+            score += (this.type + 1) * 10 + 60; 
             createExplosion(this.x, this.y, this.color, 10);
             if(this.type === 2) { 
                 let item = itemPool.get(); if(item) item.spawn(this.x, this.y, 0); 
@@ -752,8 +745,7 @@ class Boss {
         if(this.hp <= 0) {
             this.active = false;
             createExplosion(this.x, this.y, '#f00', 100);
-            // BOSS得分随索引增加
-            score += 1000 + this.idx * 500; 
+            score += 1000; 
             bossMode = false; 
             bossDefeatedCount++;
             
@@ -816,7 +808,6 @@ function spawnEnemies(dt) {
         
         if(activeCount < maxEnemies) {
             let type = Math.floor(Math.random() * 6);
-            // 再降低升级道具出现的概率 (约1%)
             if(Math.random() < 0.01) type = 2; 
             
             if([2,3,5].includes(type) && enemyPool.items.some(e => e.active && [2,3,5].includes(e.type))) {
