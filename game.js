@@ -808,7 +808,7 @@ function spawnEnemies(dt) {
         
         if(activeCount < maxEnemies) {
             let type = Math.floor(Math.random() * 6);
-            if(Math.random() < 0.01) type = 2; 
+            if(Math.random() < 0.002) type = 2; 
             
             if([2,3,5].includes(type) && enemyPool.items.some(e => e.active && [2,3,5].includes(e.type))) {
                 type = Math.random() < 0.5 ? 0 : 1;
