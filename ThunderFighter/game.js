@@ -21,7 +21,6 @@ function initStars() {
             x: Math.random() * W,
             y: Math.random() * H,
             size: Math.random() * 2 + 0.5,
-            // 降低星星初始透明度，使其显得更暗更深邃
             alpha: Math.random() * 0.3 + 0.05, 
             speed: Math.random() * 100 + 50 
         });
@@ -55,6 +54,13 @@ function playSound(type) {
         gainNode.gain.setValueAtTime(0.05, now);
         gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
         osc.start(now); osc.stop(now + 0.1);
+    } else if (type === 'player_hit') { // 玩家受击专属音效
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
+        gainNode.gain.setValueAtTime(0.2, now); // 声音更大更沉
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.start(now); osc.stop(now + 0.3);
     } else if (type === 'explode') {
         osc.type = 'square';
         osc.frequency.setValueAtTime(100, now);
@@ -103,7 +109,6 @@ let stageLevel = 1;
 let bossMode = false;
 let bossDefeatedCount = 0;
 let nextBossScore = 10000;
-let damageFlashTimer = 0; // 屏幕受击红光闪烁计时器
 
 const keys = {};
 const mouse = { x: W/2, y: H/2, isDown: false };
@@ -279,7 +284,8 @@ class Player {
         this.wingmanAngle = 0;
         this.shieldActive = false;
         this.shieldTime = 0;
-        this.hitTimer = 0; // 受击闪白计时
+        this.hitTimer = 0; 
+        this.bossHitSoundCooldown = 0; // Boss接触伤害的音效冷却
     }
     update(dt) {
         let dx = 0, dy = 0;
@@ -311,6 +317,7 @@ class Player {
         }
 
         if(this.hitTimer > 0) this.hitTimer -= dt;
+        if(this.bossHitSoundCooldown > 0) this.bossHitSoundCooldown -= dt;
 
         // 自动射击
         this.shootCooldown -= dt;
@@ -420,10 +427,9 @@ class Player {
         }
         this.hp -= dmg;
         this.power = Math.max(1, this.power - 1);
-        playSound('hit');
+        playSound('player_hit');
         createExplosion(this.x, this.y, '#f00', 5);
         this.hitTimer = 0.1; // 玩家受击白闪
-        damageFlashTimer = 0.15; // 屏幕受击红闪
         if(this.hp <= 0) gameOver();
     }
     draw(ctx) {
@@ -440,7 +446,6 @@ class Player {
 
         ctx.shadowBlur = 15; ctx.shadowColor = '#0ff';
         
-        // 战机机身受击闪烁反馈
         if (this.hitTimer > 0) {
             ctx.fillStyle = '#fff';
             ctx.strokeStyle = '#fff';
@@ -459,7 +464,6 @@ class Player {
         ctx.beginPath(); ctx.arc(0, -5, 3, 0, Math.PI*2); ctx.fill();
         ctx.restore();
 
-        // 僚机渲染部分省略受击反馈保持常亮
         if (this.power >= 6) {
             ctx.save();
             ctx.shadowBlur = 10; ctx.shadowColor = '#0f0';
@@ -578,7 +582,7 @@ class Enemy {
     spawn(type, x, y, hpMulti) {
         this.type = type; this.x = x; this.y = y; this.active = true;
         this.time = 0; this.shootTimer = Math.random();
-        this.hitTimer = 0; // 受击闪亮计时
+        this.hitTimer = 0; 
         
         this.radius = type === 2 ? 18 : 15;
         this.hp = [20, 30, 80, 60, 40, 70][type] * hpMulti;
@@ -630,7 +634,7 @@ class Enemy {
     takeDamage(amt) {
         if(!this.active) return;
         this.hp -= amt;
-        this.hitTimer = 0.05; // 击中表现
+        this.hitTimer = 0.05; 
         playSound('hit');
         if(this.hp <= 0) {
             this.active = false;
@@ -646,7 +650,6 @@ class Enemy {
         if(!this.active) return;
         ctx.shadowBlur = 10; ctx.shadowColor = this.color;
         
-        // 受击变白效果
         if (this.hitTimer > 0) {
             ctx.strokeStyle = '#fff';
             ctx.fillStyle = '#fff';
@@ -691,7 +694,7 @@ class Boss {
         this.x = W/2; this.y = -100;
         this.maxHp = 3000 + idx * 2000; this.hp = this.maxHp;
         this.state = 'enter'; this.time = 0;
-        this.hitTimer = 0; // Boss受击反馈计时
+        this.hitTimer = 0; 
         
         document.getElementById('bossUI').style.display = 'block';
         document.getElementById('bossName').innerText = `BOSS 0${this.idx + 1} - ${bossNames[this.idx]}`;
@@ -759,7 +762,7 @@ class Boss {
     takeDamage(amt) {
         if(this.state === 'enter' || !this.active) return;
         this.hp -= amt;
-        this.hitTimer = 0.05; // Boss受击反馈
+        this.hitTimer = 0.05; 
         playSound('hit');
         this.updateHPBar();
         if(this.hp <= 0) {
@@ -789,7 +792,6 @@ class Boss {
         ctx.save(); ctx.translate(this.x, this.y);
         ctx.shadowBlur = 20; ctx.shadowColor = '#f00';
         
-        // 受击变白效果
         if (this.hitTimer > 0) {
             ctx.fillStyle = '#fff';
             ctx.strokeStyle = '#fff';
@@ -960,7 +962,13 @@ function gameLoop(now) {
          if(!player.shieldActive) {
              player.hp -= 1 * dt * 60; 
              player.hitTimer = 0.1;
-             damageFlashTimer = 0.1;
+             
+             // 限制因持续伤害导致受击音效频繁重叠
+             if (player.bossHitSoundCooldown <= 0) {
+                 playSound('player_hit');
+                 player.bossHitSoundCooldown = 0.3; // 冷却 0.3 秒
+             }
+             
              updateHUD();
              if(player.hp <= 0) gameOver();
          } else {
@@ -973,11 +981,16 @@ function gameLoop(now) {
     boss.draw(ctx);
     player.draw(ctx);
     
-    // 渲染屏幕受击红闪蒙版
-    if(damageFlashTimer > 0) {
-        damageFlashTimer -= dt;
-        ctx.fillStyle = `rgba(255, 0, 0, ${damageFlashTimer * 3})`; 
-        ctx.fillRect(0, 0, W, H);
+    // 渲染低血量屏幕边缘红光闪烁
+    if (player.hp <= 30 && player.hp > 0) {
+        let pulseAlpha = 0.2 + Math.sin(now / 150) * 0.15; // 呼吸闪烁效果
+        ctx.save();
+        ctx.lineWidth = 30;
+        ctx.strokeStyle = `rgba(255, 0, 0, ${pulseAlpha})`;
+        ctx.shadowBlur = 40;
+        ctx.shadowColor = '#f00';
+        ctx.strokeRect(15, 15, W - 30, H - 30);
+        ctx.restore();
     }
     
     updateHUD();
@@ -992,7 +1005,6 @@ function gameOver() {
 function initGame() {
     score = 0; stageLevel = 1; bossMode = false; 
     bossDefeatedCount = 0; nextBossScore = 10000;
-    damageFlashTimer = 0;
     player.reset();
     [bulletPool, particlePool, itemPool, enemyPool].forEach(p => p.items.forEach(i => i.active = false));
     boss.active = false;
