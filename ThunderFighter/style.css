@@ -59,7 +59,7 @@ body, html {
 #pauseBtn { bottom: 20px; left: 20px; }
 #muteBtn { bottom: 20px; right: 20px; }
 
-#pauseMenu, #gameOverMenu {
+#mainMenu, #pauseMenu, #gameOverMenu {
     display: none; 
     position: absolute; 
     top: 0; 
@@ -154,13 +154,4 @@ h1 {
     background: #f00; 
     transition: width 0.1s linear;
     box-shadow: 0 0 10px #f00;
-}
-
-#pauseMenu .btn,
-#gameOverMenu .btn {
-    position: relative;   /* 改为相对定位，脱离绝对定位的影响 */
-    bottom: auto;
-    left: auto;
-    margin: 15px auto;    /* 让按钮居中并保持间距 */
-    display: block;
 }
