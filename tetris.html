@@ -235,7 +235,7 @@
 
   <div id="game-area">
     <div id="pc-hints" aria-hidden="true">
-      <h3>PC 按键提���</h3>
+      <h3>PC 按键提示</h3>
       <div class="hint-row"><span class="keycap">A</span><span>向左</span></div>
       <div class="hint-row"><span class="keycap">D</span><span>向右</span></div>
       <div class="hint-row"><span class="keycap">W</span><span>旋转</span></div>
@@ -258,7 +258,7 @@
     <div id="overlay-start" class="overlay">
       <h1>俄罗斯方块</h1>
       <button id="start-normal-btn">普通模式</button>
-      <button id="start-easy-btn" class="secondary">简单模式 (带虚影)</button>
+      <button id="start-easy-btn" class="secondary">简单模式</button>
     </div>
 
     <!-- 暂停菜单 -->
@@ -754,7 +754,7 @@
             const pad = 1;
             
             // 淡淡的白色边框
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
             ctx.strokeRect(px + pad, py + pad, BLOCK_SIZE - pad*2, BLOCK_SIZE - pad*2);
             
             // 极浅的内部填充，增加存在感但保持“虚”的质感
