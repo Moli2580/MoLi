@@ -258,7 +258,7 @@
     <div id="overlay-start" class="overlay">
       <h1>俄罗斯方块</h1>
       <button id="start-normal-btn">普通模式</button>
-      <button id="start-easy-btn" class="secondary">简单模式</button>
+      <button id="start-easy-btn" class="secondary">简单模式 (带虚影)</button>
     </div>
 
     <!-- 暂停菜单 -->
@@ -291,7 +291,8 @@
     const nextCanvas = document.getElementById('next-canvas');
     const nextCtx = nextCanvas.getContext('2d');
 
-    const COLS = 11;
+    // 修改为标准 10列 x 20行
+    const COLS = 10;
     const ROWS = 20;
     let BLOCK_SIZE = 20;
 
