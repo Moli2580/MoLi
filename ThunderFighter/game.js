@@ -736,7 +736,7 @@ class Boss {
         this.active = true; 
         this.idx = Math.min(idx, 4); 
         this.x = W/2; this.y = -100;
-        this.maxHp = 6000 + idx * 6000; this.hp = this.maxHp;
+        this.maxHp = 5000 + idx * 5000; this.hp = this.maxHp;
         this.state = 'enter'; 
         this.time = 0;
         this.hitTimer = 0; 
@@ -893,11 +893,11 @@ class Boss {
             bossMode = false; 
             bossDefeatedCount++;
             
-            if (bossDefeatedCount === 1) nextBossScore = 8000;
-            else if (bossDefeatedCount === 2) nextBossScore = 12000;
-            else if (bossDefeatedCount === 3) nextBossScore = 16000;
-            else if (bossDefeatedCount === 4) nextBossScore = 20000;
-            else nextBossScore += 6000;
+            if (bossDefeatedCount === 1) nextBossScore = 10000;
+            else if (bossDefeatedCount === 2) nextBossScore = 16000;
+            else if (bossDefeatedCount === 3) nextBossScore = 24000;
+            else if (bossDefeatedCount === 4) nextBossScore = 36000;
+            else nextBossScore += 10000;
 
             stageLevel = Math.min(6, bossDefeatedCount + 1);
 
@@ -1109,16 +1109,16 @@ function gameLoop(now) {
     boss.draw(ctx);
     player.draw(ctx);
     
-    if (player.hp <= 30 && player.hp > 0) {
-        let pulseAlpha = 0.2 + Math.sin(now / 150) * 0.15; 
-        ctx.save();
-        ctx.lineWidth = 30;
-        ctx.strokeStyle = `rgba(255, 0, 0, ${pulseAlpha})`;
-        ctx.shadowBlur = 40;
-        ctx.shadowColor = '#f00';
-        ctx.strokeRect(15, 15, W - 30, H - 30);
-        ctx.restore();
-    }
+    // if (player.hp <= 30 && player.hp > 0) {
+    //     let pulseAlpha = 0.2 + Math.sin(now / 150) * 0.15; 
+    //     ctx.save();
+    //     ctx.lineWidth = 30;
+    //     ctx.strokeStyle = `rgba(255, 0, 0, ${pulseAlpha})`;
+    //     ctx.shadowBlur = 40;
+    //     ctx.shadowColor = '#f00';
+    //     ctx.strokeRect(15, 15, W - 30, H - 30);
+    //     ctx.restore();
+    // }
     
     updateHUD();
 }
