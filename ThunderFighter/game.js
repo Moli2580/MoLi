@@ -986,11 +986,11 @@ function gameLoop(now) {
     let pulseAlpha = 0.2 + Math.sin(now / 150) * 0.15;
     ctx.save();
     // 阴影模糊实现边缘扩散/光晕效果
-    ctx.shadowBlur = 25;               // 数值越大边缘越柔和、光晕越大
+    ctx.shadowBlur = 75;               // 数值越大边缘越柔和、光晕越大
     ctx.shadowColor = 'rgba(255, 0, 0, 0.8)';
     ctx.fillStyle = `rgba(255, 0, 0, ${pulseAlpha})`;
 
-    const edgeWidth = 15;              // 左右边缘宽度（可调小以减细红光）
+    const edgeWidth = 5;              // 左右边缘宽度（可调小以减细红光）
     // 左边缘
     ctx.fillRect(0, 0, edgeWidth, H);
     // 右边缘
