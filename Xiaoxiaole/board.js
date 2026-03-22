@@ -48,14 +48,14 @@ class BoardLogic {
                     this.swapCoords(r, c, r, c + 1);
                     let matches = this.findMatches(false);
                     this.swapCoords(r, c, r, c + 1); // 还原
-                    if (matches.length > 0) return true;
+                    if (matches.cells.length > 0) return true;
                 }
                 // 向下交换预测
                 if (r < CONFIG.ROWS - 1) {
                     this.swapCoords(r, c, r + 1, c);
                     let matches = this.findMatches(false);
                     this.swapCoords(r, c, r + 1, c); // 还原
-                    if (matches.length > 0) return true;
+                    if (matches.cells.length > 0) return true;
                 }
             }
         }
