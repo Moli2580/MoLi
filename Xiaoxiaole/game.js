@@ -191,7 +191,7 @@ const Game = {
         while (matchResult.cells.length > 0) {
             AudioSys.match(combo);
             if (combo > 1 && !this.isBonusTime) {
-                this.ui.showFloatingText(`${combo} 連擊!`, '#facc15');
+                this.ui.showFloatingText(`${combo} 连击!`, '#facc15');
             }
 
             // 获取特效波及的全部范围
