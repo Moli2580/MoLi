@@ -7,6 +7,7 @@ const Game = {
     score: 0,
     moves: 0,
     target: 0,
+    isBonusTime: false, // 标记是否进入过关奖励时间
 
     touchStartX: 0,
     touchStartY: 0,
@@ -24,7 +25,6 @@ const Game = {
         document.getElementById('btn-quit').onclick = () => { AudioSys.click(); this.showScreen('main-menu'); };
         document.getElementById('btn-restart').onclick = () => { AudioSys.click(); this.startNewGame(); };
 
-        // 统一在棋盘上监听触摸/鼠标，解决点击不准和实现滑动
         const board = document.getElementById('board');
         
         const handleStart = (e) => {
@@ -55,15 +55,14 @@ const Game = {
             const dx = clientX - this.touchStartX;
             const dy = clientY - this.touchStartY;
 
-            // 如果滑动距离超过一定阈值，则认为是滑动交换
             if (Math.abs(dx) > 20 || Math.abs(dy) > 20) {
                 let targetR = this.startR;
                 let targetC = this.startC;
 
                 if (Math.abs(dx) > Math.abs(dy)) {
-                    targetC += (dx > 0 ? 1 : -1); // 左右
+                    targetC += (dx > 0 ? 1 : -1); 
                 } else {
-                    targetR += (dy > 0 ? 1 : -1); // 上下
+                    targetR += (dy > 0 ? 1 : -1); 
                 }
 
                 if (targetR >= 0 && targetR < CONFIG.ROWS && targetC >= 0 && targetC < CONFIG.COLS) {
@@ -90,6 +89,7 @@ const Game = {
     startNewGame() {
         this.stage = 1;
         this.score = 0;
+        this.isBonusTime = false;
         this.setupStage();
         this.showScreen('game-ui');
     },
@@ -97,6 +97,7 @@ const Game = {
     setupStage() {
         this.target = Math.floor(CONFIG.STAGE.BASE_TARGET * Math.pow(CONFIG.STAGE.TARGET_GROWTH, this.stage - 1));
         this.moves = CONFIG.STAGE.BASE_MOVES + (this.stage > 1 ? CONFIG.STAGE.BONUS_MOVES : 0);
+        this.isBonusTime = false;
         
         this.logic.init();
         this.ui.initBoard(this.logic.grid);
@@ -143,35 +144,42 @@ const Game = {
         this.state = 'ANIMATING';
         AudioSys.swap();
         
+        // 获取交换前的对象引用
         const item1 = this.logic.grid[sr][sc];
         const item2 = this.logic.grid[r][c];
 
         await this.ui.animateSwap(item1, item2, sr, sc, r, c);
+        
+        // 逻辑层交换，交换后 item1在(r,c)，item2在(sr,sc)
         this.logic.swapCoords(sr, sc, r, c);
 
-        // 检测特殊道具互换机制
+        // 两个特殊道具强制互相引爆
         let forceExplode = false;
-        let specialMatches = [];
         if (item1.type !== CONFIG.TYPES.NORMAL && item2.type !== CONFIG.TYPES.NORMAL) {
             forceExplode = true;
-            specialMatches = [{r: sr, c: sc}, {r, c}];
         }
 
         let matchResult = this.logic.findMatches();
         
+        // 合法换位检测：要么有基础消除，要么是双特效交换
         if (matchResult.cells.length > 0 || forceExplode) {
             this.moves--;
-            if (forceExplode) {
-                // 合并匹配区域
-                specialMatches.forEach(sm => {
-                    if (!matchResult.cells.some(cell => cell.r === sm.r && cell.c === sm.c)) {
-                        matchResult.cells.push(sm);
-                    }
-                });
+            
+            // 只要换位合法，参与换位的特殊元素自动引爆
+            if (item1.type !== CONFIG.TYPES.NORMAL) {
+                if (!matchResult.cells.some(cell => cell.r === r && cell.c === c)) {
+                    matchResult.cells.push({r, c});
+                }
             }
+            if (item2.type !== CONFIG.TYPES.NORMAL) {
+                if (!matchResult.cells.some(cell => cell.r === sr && cell.c === sc)) {
+                    matchResult.cells.push({r: sr, c: sc});
+                }
+            }
+
             await this.processCascades(matchResult, 1);
         } else {
-            // 无消除退回
+            // 无效交换，原路退回
             AudioSys.error();
             await this.ui.animateSwap(item1, item2, r, c, sr, sc);
             this.logic.swapCoords(sr, sc, r, c);
@@ -182,21 +190,24 @@ const Game = {
     async processCascades(matchResult, combo) {
         while (matchResult.cells.length > 0) {
             AudioSys.match(combo);
-            if (combo > 1) this.ui.showFloatingText(`${combo} 連擊!`, '#facc15');
+            if (combo > 1 && !this.isBonusTime) {
+                this.ui.showFloatingText(`${combo} 連擊!`, '#facc15');
+            }
 
+            // 获取特效波及的全部范围
             let allToRemove = this.logic.getExplosionArea(matchResult.cells);
 
             let points = allToRemove.length * CONFIG.SCORE.BASE * (1 + (combo - 1) * 0.5);
             this.score += Math.floor(points);
             this.ui.updateStats(this.stage, this.score, this.moves, this.target);
 
-            // 如果有特殊道具爆炸，加一个爆炸音效
             if (allToRemove.length > matchResult.cells.length) {
                 AudioSys.bomb();
             }
 
             await this.ui.animateRemoval(allToRemove, this.logic.grid);
 
+            // 清理并生成新的特殊道具
             allToRemove.forEach(({r, c}) => { this.logic.grid[r][c] = null; });
             matchResult.specials.forEach(sp => {
                 if (!this.logic.grid[sp.r][sp.c]) {
@@ -209,6 +220,7 @@ const Game = {
             await Utils.sleep(CONFIG.ANIMATION_SPEED);
 
             combo++;
+            // 继续检测下落后的自然消除
             matchResult = this.logic.findMatches();
         }
 
@@ -226,9 +238,33 @@ const Game = {
 
     checkGameState() {
         if (this.score >= this.target) {
-            AudioSys.levelUp();
-            this.stage++;
-            this.setupStage();
+            // 阶段达标时，检查是否还有特殊能力元素残留
+            let specials = [];
+            for (let r = 0; r < CONFIG.ROWS; r++) {
+                for (let c = 0; c < CONFIG.COLS; c++) {
+                    if (this.logic.grid[r][c] && this.logic.grid[r][c].type !== CONFIG.TYPES.NORMAL) {
+                        specials.push({r, c});
+                    }
+                }
+            }
+
+            if (specials.length > 0) {
+                // 如果有残留特效，进入 Bonus Time，全部引爆并结算自然掉落的消除
+                this.state = 'ANIMATING';
+                if (!this.isBonusTime) {
+                    this.isBonusTime = true;
+                    this.ui.showFloatingText('Bonus Time!', '#facc15');
+                }
+                setTimeout(() => {
+                    this.processCascades({ cells: specials, specials: [] }, 1);
+                }, 500);
+            } else {
+                // 完全结算完毕，进入下一阶段
+                this.isBonusTime = false;
+                AudioSys.levelUp();
+                this.stage++;
+                this.setupStage();
+            }
         } else if (this.moves <= 0) {
             this.state = 'GAMEOVER';
             AudioSys.gameOver();
