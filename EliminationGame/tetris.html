@@ -576,7 +576,7 @@
 
     // 设置状态：音量 (0~1)
     let bgmVolume = parseFloat(localStorage.getItem('tetrisBgmVol')) ?? 1.0;
-    if (isNaN(bgmVolume)) bgmVolume = 0.5;
+    if (isNaN(bgmVolume)) bgmVolume = 0.1;
     
     let sfxVolume = parseFloat(localStorage.getItem('tetrisSfxVol')) ?? 1.0;
     if (isNaN(sfxVolume)) sfxVolume = 1.0;
