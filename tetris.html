@@ -39,7 +39,6 @@
       position: relative;
     }
 
-    /* 将原本硬编码在canvas上的宽高控制转移到JS中动态设置style */
     canvas {
       background-color: var(--panel);
       border: 2px solid var(--panel2);
@@ -163,17 +162,37 @@
       z-index: 10;
     }
 
-    .overlay h1 {
+    /* 固定高度的菜单容器，确保所有界面的按钮位置完全一样 */
+    .menu-wrapper {
+      position: relative;
+      width: 280px;
+      height: 380px;
+    }
+
+    .menu-header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 120px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .menu-header h1 {
       color: var(--accent);
-      margin-bottom: 10px;
+      margin: 0;
       font-size: 36px;
       text-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
+      text-align: center;
     }
 
     .menu-high-score-text {
       color: var(--text);
       font-size: 18px;
-      margin-bottom: 30px;
+      margin: 15px 0 0 0;
       font-weight: bold;
       text-shadow: 0 0 5px rgba(0,0,0,0.5);
     }
@@ -183,15 +202,69 @@
       font-size: 22px;
     }
 
+    .menu-buttons {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center; /* 让按钮居中 */
+      gap: 16px;
+    }
+
+    .overlay button {
+      padding: 15px 20px;
+      font-size: 18px;
+      background-color: var(--accent); /* 默认主色调红色 */
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      margin: 0;
+      width: 210px; /* 固定缩短后的按钮宽度 */
+      box-sizing: border-box;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+      transition: transform 0.1s, background-color 0.2s;
+    }
+    
+    .overlay button:active {
+      transform: translateY(2px);
+    }
+
+    .overlay button.secondary {
+      background-color: var(--panel2); /* 蓝色 */
+    }
+
+    /* 设置界面开关按钮特殊样式 */
+    .toggle-btn {
+      display: flex !important;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 25px !important;
+    }
+    .toggle-btn span.status {
+      color: var(--accent);
+      background: rgba(0,0,0,0.3);
+      padding: 2px 10px;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    .toggle-btn.off span.status {
+      color: #aaa;
+    }
+
     /* 结算界面得分显示 */
     .score-display {
       text-align: center;
-      margin-bottom: 25px;
       background: rgba(15, 52, 96, 0.6);
-      padding: 20px 30px;
+      padding: 20px 0;
       border-radius: 12px;
       border: 1px solid var(--panel2);
       box-shadow: inset 0 0 15px rgba(0,0,0,0.3);
+      width: 100%;
+      box-sizing: border-box;
     }
     
     .score-display p {
@@ -220,47 +293,6 @@
       margin-left: 10px;
       vertical-align: middle;
       animation: pulse 0.8s infinite alternate;
-    }
-
-    .overlay button {
-      padding: 15px 30px;
-      font-size: 18px;
-      background-color: var(--accent);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-weight: bold;
-      margin: 8px;
-      min-width: 180px;
-      cursor: pointer;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.4);
-      transition: transform 0.1s, background-color 0.2s;
-    }
-    
-    .overlay button:active {
-      transform: translateY(2px);
-    }
-
-    .overlay button.secondary {
-      background-color: var(--panel2);
-    }
-
-    /* 设置界面开关按钮特殊样式 */
-    .toggle-btn {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 15px 25px !important;
-    }
-    .toggle-btn span.status {
-      color: var(--accent);
-      background: rgba(0,0,0,0.3);
-      padding: 2px 10px;
-      border-radius: 4px;
-      font-size: 16px;
-    }
-    .toggle-btn.off span.status {
-      color: #aaa;
     }
 
     /* PC 左侧按键提示 */
@@ -340,43 +372,67 @@
 
     <!-- 主菜单 -->
     <div id="overlay-start" class="overlay">
-      <h1>俄罗斯方块</h1>
-      <p class="menu-high-score-text">最高分: <span id="menu-high-score">0</span></p>
-      <button id="start-normal-btn">普通模式</button>
-      <button id="start-easy-btn" class="secondary">简单模式</button>
-      <button id="settings-btn" class="secondary" style="margin-top: 10px;">设 置</button>
+      <div class="menu-wrapper">
+        <div class="menu-header">
+          <h1>俄罗斯方块</h1>
+          <p class="menu-high-score-text">最高分: <span id="menu-high-score">0</span></p>
+        </div>
+        <div class="menu-buttons">
+          <button id="start-normal-btn" class="secondary">普通模式</button>
+          <button id="start-easy-btn" class="secondary">简单模式</button>
+          <button id="settings-btn" class="secondary">设 置</button>
+        </div>
+      </div>
     </div>
 
     <!-- 设置菜单 -->
     <div id="overlay-settings" class="overlay" style="display: none;">
-      <h1>设置</h1>
-      <button id="toggle-sound-btn" class="secondary toggle-btn">
-        <span>音效</span>
-        <span class="status" id="sound-status">开</span>
-      </button>
-      <button id="toggle-grid-btn" class="secondary toggle-btn">
-        <span>网格</span>
-        <span class="status" id="grid-status">开</span>
-      </button>
-      <button id="menu-btn-settings" style="margin-top: 30px;">返回菜单</button>
+      <div class="menu-wrapper">
+        <div class="menu-header">
+          <h1>设置</h1>
+        </div>
+        <div class="menu-buttons">
+          <button id="toggle-sound-btn" class="secondary toggle-btn">
+            <span>音效</span>
+            <span class="status" id="sound-status">开</span>
+          </button>
+          <button id="toggle-grid-btn" class="secondary toggle-btn">
+            <span>网格</span>
+            <span class="status" id="grid-status">开</span>
+          </button>
+          <button id="menu-btn-settings">返回菜单</button>
+        </div>
+      </div>
     </div>
 
     <!-- 暂停菜单 -->
     <div id="overlay-pause" class="overlay" style="display: none;">
-      <h1>游戏暂停</h1>
-      <button id="resume-btn">继续游戏</button>
-      <button id="restart-btn" class="secondary">重新开始</button>
-      <button id="menu-btn-pause" class="secondary">返回菜单</button>
+      <div class="menu-wrapper">
+        <div class="menu-header">
+          <h1>游戏暂停</h1>
+        </div>
+        <div class="menu-buttons">
+          <button id="resume-btn" class="secondary">继续游戏</button>
+          <button id="restart-btn" class="secondary">重新开始</button>
+          <button id="menu-btn-pause">返回菜单</button>
+        </div>
+      </div>
     </div>
 
     <!-- 游戏结束菜单 -->
     <div id="overlay-gameover" class="overlay" style="display: none;">
-      <h1>游戏结束</h1>
-      <div class="score-display">
-        <p class="final-score">得分: <span id="final-score-val">0</span><span id="new-record-badge">新纪录!</span></p>
+      <div class="menu-wrapper" style="height: 400px;">
+        <div class="menu-header" style="height: 100px;">
+          <h1>游戏结束</h1>
+        </div>
+        <div class="score-display" style="position: absolute; top: 120px;">
+          <p class="final-score">得分: <span id="final-score-val">0</span><span id="new-record-badge">新纪录!</span></p>
+        </div>
+        <div class="menu-buttons">
+          <button id="retry-btn" class="secondary">再来一局</button>
+          <button id="menu-btn-gameover">返回菜单</button>
+        </div>
       </div>
-      <button id="retry-btn">再来一局</button>
-      <button id="menu-btn-gameover" class="secondary">返回菜单</button>
     </div>
   </div>
 
@@ -704,7 +760,7 @@
       score += points[linesCleared] * level;
       scoreEl.innerText = score;
       
-      // 实时更新最高分UI
+      // 实��更新最高分UI
       if (score > currentHighScore) {
         currentHighScore = score;
         uiHighScoreEl.innerText = currentHighScore;
