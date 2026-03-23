@@ -245,6 +245,24 @@
       background-color: var(--panel2);
     }
 
+    /* 设置界面开关按钮特殊样式 */
+    .toggle-btn {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 25px !important;
+    }
+    .toggle-btn span.status {
+      color: var(--accent);
+      background: rgba(0,0,0,0.3);
+      padding: 2px 10px;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    .toggle-btn.off span.status {
+      color: #aaa;
+    }
+
     /* PC 左侧按键提示 */
     #pc-hints {
       display: none;
@@ -300,7 +318,7 @@
 
   <div id="game-area">
     <div id="pc-hints" aria-hidden="true">
-      <h3>按键提示</h3>
+      <h3>PC 按键提示</h3>
       <div class="hint-row"><span class="keycap">A</span><span>向左</span></div>
       <div class="hint-row"><span class="keycap">D</span><span>向右</span></div>
       <div class="hint-row"><span class="keycap">W</span><span>旋转</span></div>
@@ -326,6 +344,21 @@
       <p class="menu-high-score-text">最高分: <span id="menu-high-score">0</span></p>
       <button id="start-normal-btn">普通模式</button>
       <button id="start-easy-btn" class="secondary">简单模式</button>
+      <button id="settings-btn" class="secondary" style="margin-top: 20px;">设 置</button>
+    </div>
+
+    <!-- 设置菜单 -->
+    <div id="overlay-settings" class="overlay" style="display: none;">
+      <h1>设置</h1>
+      <button id="toggle-sound-btn" class="secondary toggle-btn">
+        <span>声音音效</span>
+        <span class="status" id="sound-status">开</span>
+      </button>
+      <button id="toggle-grid-btn" class="secondary toggle-btn">
+        <span>显示网格</span>
+        <span class="status" id="grid-status">开</span>
+      </button>
+      <button id="menu-btn-settings" style="margin-top: 30px;">返回菜单</button>
     </div>
 
     <!-- 暂停菜单 -->
@@ -375,6 +408,7 @@
     const menuHighScoreEl = document.getElementById('menu-high-score');
 
     const overlayStart = document.getElementById('overlay-start');
+    const overlaySettings = document.getElementById('overlay-settings');
     const overlayPause = document.getElementById('overlay-pause');
     const overlayGameover = document.getElementById('overlay-gameover');
 
@@ -420,6 +454,10 @@
     // 游戏模式: 'normal' 或 'easy'
     let gameMode = 'normal'; 
 
+    // 设置状态
+    let soundEnabled = localStorage.getItem('tetrisSound') !== 'false';
+    let gridEnabled = localStorage.getItem('tetrisGrid') !== 'false';
+
     const IS_PC = matchMedia('(hover: hover) and (pointer: fine)').matches;
 
     // ======= 消除动画状态 =======
@@ -464,11 +502,13 @@
     // ===== 音效 =====
     let audioCtx = null;
     function initAudio() {
+      if (!soundEnabled) return;
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === 'suspended') audioCtx.resume();
     }
 
     function playTone(freq, type, duration, vol = 0.1) {
+      if (!soundEnabled) return;
       if (!audioCtx || audioCtx.state === 'suspended') return;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
@@ -487,6 +527,7 @@
     }
 
     function playPop() {
+      if (!soundEnabled) return;
       if (!audioCtx || audioCtx.state !== 'running') return;
       const now = audioCtx.currentTime;
       const osc = audioCtx.createOscillator();
@@ -520,6 +561,30 @@
       currentHighScore = parseInt(localStorage.getItem('tetrisHighScore') || '0', 10);
       menuHighScoreEl.innerText = currentHighScore;
       uiHighScoreEl.innerText = currentHighScore;
+    }
+
+    // 刷新设置界面的按钮状态
+    function refreshSettingsUI() {
+      const btnSound = document.getElementById('toggle-sound-btn');
+      const btnGrid = document.getElementById('toggle-grid-btn');
+      const statusSound = document.getElementById('sound-status');
+      const statusGrid = document.getElementById('grid-status');
+
+      if(soundEnabled) {
+        btnSound.classList.remove('off');
+        statusSound.innerText = '开';
+      } else {
+        btnSound.classList.add('off');
+        statusSound.innerText = '关';
+      }
+
+      if(gridEnabled) {
+        btnGrid.classList.remove('off');
+        statusGrid.innerText = '开';
+      } else {
+        btnGrid.classList.add('off');
+        statusGrid.innerText = '关';
+      }
     }
 
     function resize() {
@@ -830,6 +895,8 @@
     }
 
     function drawGrid() {
+      if (!gridEnabled) return; // 根据设置开关控制是否绘制网格
+      
       ctx.strokeStyle = '#2a3b5c';
       ctx.lineWidth = 1;
       for (let i = 0; i <= COLS; i++) {
@@ -947,7 +1014,7 @@
     }
 
     function update(time = 0) {
-      if (gameOver || isPaused || overlayStart.style.display !== 'none') return;
+      if (gameOver || isPaused || overlayStart.style.display !== 'none' || overlaySettings.style.display !== 'none') return;
 
       const deltaTime = time - lastTime;
       lastTime = time;
@@ -1025,6 +1092,7 @@
       lastTime = performance.now();
 
       overlayStart.style.display = 'none';
+      overlaySettings.style.display = 'none';
       overlayPause.style.display = 'none';
       overlayGameover.style.display = 'none';
 
@@ -1036,7 +1104,7 @@
       isPaused = true;
       if (reqAnimId) cancelAnimationFrame(reqAnimId);
       
-      refreshHighScoreDisplay(); // 保证菜单显示���最高分是最新的
+      refreshHighScoreDisplay(); // 保证菜单显示的最高分是最新的
 
       // 清空棋盘画布用于做主菜单背景
       board = createMatrix(COLS, ROWS);
@@ -1045,11 +1113,12 @@
 
       overlayPause.style.display = 'none';
       overlayGameover.style.display = 'none';
+      overlaySettings.style.display = 'none';
       overlayStart.style.display = 'flex'; // 显示主菜单
     }
 
     function togglePause() {
-      if (gameOver || overlayStart.style.display !== 'none') return;
+      if (gameOver || overlayStart.style.display !== 'none' || overlaySettings.style.display !== 'none') return;
       isPaused = true;
       overlayPause.style.display = 'flex';
       if (reqAnimId) cancelAnimationFrame(reqAnimId);
@@ -1115,9 +1184,32 @@
       el.addEventListener('touchstart', (e) => { e.preventDefault(); fn(); }, { passive: false });
     };
 
+    // 菜单按钮
     bindClick('start-normal-btn', () => startGame('normal'));
     bindClick('start-easy-btn', () => startGame('easy'));
+    bindClick('settings-btn', () => {
+      overlayStart.style.display = 'none';
+      overlaySettings.style.display = 'flex';
+      refreshSettingsUI();
+    });
     
+    // 设置界面按钮
+    bindClick('toggle-sound-btn', () => {
+      soundEnabled = !soundEnabled;
+      localStorage.setItem('tetrisSound', soundEnabled);
+      refreshSettingsUI();
+    });
+    bindClick('toggle-grid-btn', () => {
+      gridEnabled = !gridEnabled;
+      localStorage.setItem('tetrisGrid', gridEnabled);
+      refreshSettingsUI();
+    });
+    bindClick('menu-btn-settings', () => {
+      overlaySettings.style.display = 'none';
+      overlayStart.style.display = 'flex';
+      draw(); // 刷新背景网格状态
+    });
+
     bindClick('resume-btn', resumeGame);
     bindClick('restart-btn', resetGame);
     bindClick('menu-btn-pause', returnToMenu);
@@ -1137,7 +1229,8 @@
         }
         return;
       }
-
+      
+      if (overlaySettings.style.display !== 'none') return;
       if (gameOver) return;
 
       if (isPaused) {
@@ -1178,6 +1271,7 @@
 
     // 初始化显示主菜单
     refreshHighScoreDisplay();
+    refreshSettingsUI();
     board = createMatrix(COLS, ROWS);
     resize();
     draw(); 
