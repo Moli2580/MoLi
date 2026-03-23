@@ -368,6 +368,36 @@
       phase: 0
     };
 
+    // ======= 7-Bag 随机生成方块 =======
+    let bag = [];
+    function initBag() {
+      bag = [1, 2, 3, 4, 5, 6, 7];
+      shuffleArray(bag); // Fisher-Yates 洗牌函数
+    }
+
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    }
+
+    function getNextPieceType() {
+      if (bag.length === 0) {
+        initBag();
+      }
+      return bag.pop();
+    }
+
+    function randomPiece() {
+      const typeId = getNextPieceType();
+      const matrix = SHAPES[typeId];
+      return {
+        matrix,
+        pos: { x: Math.floor(COLS / 2) - Math.floor(matrix.length / 2), y: 0 }
+      };
+    }
+
     // ===== 音效 =====
     let audioCtx = null;
     function initAudio() {
@@ -478,15 +508,6 @@
       return false;
     }
 
-    function randomPiece() {
-      const typeId = Math.floor(Math.random() * 7) + 1;
-      const matrix = SHAPES[typeId];
-      return {
-        matrix,
-        pos: { x: Math.floor(COLS / 2) - Math.floor(matrix.length / 2), y: 0 }
-      };
-    }
-
     function merge() {
       piece.matrix.forEach((row, y) => {
         row.forEach((value, x) => {
@@ -563,6 +584,8 @@
       if (checkCollision(piece.matrix, piece.pos)) {
         piece.pos.y--;
         lockPiece();
+      } else {
+        SFX.move(); // 加入与左右移动相同的音效
       }
       dropCounter = 0;
     }
@@ -858,6 +881,7 @@
       lines = 0;
       level = 1;
       dropInterval = 1000;
+      bag = []; // 清空 bag 保证重开时刷新七块序列
 
       scoreEl.innerText = score;
       linesEl.innerText = lines;
