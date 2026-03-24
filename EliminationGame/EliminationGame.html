@@ -262,19 +262,29 @@
     const blockCaches = [], ghostCaches = [];
     let singleGhostCache = null;
 
-    // ======= 极速零延迟音乐系统（Blob 内存预加载 + 双重缓冲） =======
+    // ======= 极速零延迟音乐系统（页面后台预加载 + 双缓冲） =======
     const bgmPlaylist = ["Ripples in the Matrix.mp3", "Soothing Cubes.mp3", "Dream of Blocks.mp3", "Critical Mass.mp3", "Rhythm of Lines.mp3"];
-    const cachedUrls = [...bgmPlaylist]; // 存储真实的或被内存化的链接
+    const cachedUrls = [...bgmPlaylist]; // 存储原始链接或转换后的 Blob 内存链接
     let currentBgmIndex = 0, activePlayerIndex = 0;
+    let hasStartedGameOnce = false; // 用于判定是不是刚打开页面的首次加载
     const audioPlayers = [new Audio(), new Audio()];
 
-    // 静默把网络mp3下载为Blob，后续提取播放实现0网络请求绝对无缝
+    // 静默将网络 mp3 下载到客户端内存为 Blob，保障后续循环绝对无卡顿
     const prefetchBgm = index => {
       if (cachedUrls[index].startsWith('blob:')) return Promise.resolve(cachedUrls[index]);
       return fetch(bgmPlaylist[index]).then(r => r.blob()).then(blob => {
         return cachedUrls[index] = URL.createObjectURL(blob);
-      }).catch(() => cachedUrls[index]); // 失败则保留原URL
+      }).catch(() => cachedUrls[index]); 
     };
+
+    // 网页加载时：立刻在后台挑选一个随机首发曲目，并启动静默下载（不播放）
+    currentBgmIndex = Math.floor(Math.random() * bgmPlaylist.length);
+    prefetchBgm(currentBgmIndex).then(url => {
+      audioPlayers[0].src = url; 
+      audioPlayers[0].load(); // 仅加载解析资源，绝不自动播放吵到用户
+    });
+    // 顺便把下一首歌也预下载到内存里
+    prefetchBgm((currentBgmIndex + 1) % bgmPlaylist.length);
 
     audioPlayers.forEach(p => {
       p.preload = 'auto';
@@ -282,17 +292,15 @@
         activePlayerIndex ^= 1;
         currentBgmIndex = (currentBgmIndex + 1) % bgmPlaylist.length;
         
-        // 此刻的下一首歌已经被100%下载为Blob在内存里，无缝触发
+        // 这一首肯定��经是 Blob 且缓冲好了的，无缝启动！
         const next = audioPlayers[activePlayerIndex];
         next.currentTime = 0; 
         next.play().catch(e => console.log(e));
         
-        // 播这首歌的同时，去预加载下下首
+        // 交替期间，派另一个播放器去加载下下首
         const nextNextIndex = (currentBgmIndex + 1) % bgmPlaylist.length;
         const standby = audioPlayers[activePlayerIndex ^ 1];
-        prefetchBgm(nextNextIndex).then(url => {
-          standby.src = url; standby.load();
-        });
+        prefetchBgm(nextNextIndex).then(url => { standby.src = url; standby.load(); });
       });
     });
 
@@ -300,18 +308,23 @@
 
     function startRandomBgm() {
       audioPlayers.forEach(p => p.pause());
-      currentBgmIndex = Math.floor(Math.random() * bgmPlaylist.length);
+      
+      // 如果这不是打开网页以来的第一局游戏（也就是用户点了重新开始），那就重新随机选一首
+      if (hasStartedGameOnce) {
+         currentBgmIndex = Math.floor(Math.random() * bgmPlaylist.length);
+      }
+      hasStartedGameOnce = true;
       activePlayerIndex = 0;
       
       const active = audioPlayers[0], standby = audioPlayers[1];
-      // 刚开局不等待，有啥播啥（如果是第一次玩就网络推流播放）
-      active.src = cachedUrls[currentBgmIndex]; active.currentTime = 0;
-      active.play().catch(e => console.log(e));
+      active.src = cachedUrls[currentBgmIndex]; 
+      active.currentTime = 0;
+      active.play().catch(e => console.log(e)); // 用户点击按钮触发，允许播放
       
-      // 让后台静默预先把当前和下一首载入 Blob 内存，确保以后循环时绝对无卡顿
+      // 预先安排下一首的资源
       const nextIndex = (currentBgmIndex + 1) % bgmPlaylist.length;
       prefetchBgm(nextIndex).then(url => { standby.src = url; standby.load(); });
-      prefetchBgm(currentBgmIndex); 
+      prefetchBgm(currentBgmIndex); // 防御性机制：确保这首也被完全载入内存
     }
 
     // ===== 音效 =====
@@ -417,17 +430,13 @@
       rows.sort((a,b)=>a-b).forEach(y => { board.splice(y, 1); board.unshift(new Array(COLS).fill(0)); });
     }
 
-    // 修复破纪录判定：和本地持久化真实记录对比
     function triggerGameOver() {
       gameOver = true; getActiveAudio().pause(); els.finalScore.innerText = score;
-      
       const savedHighScore = +(localStorage.getItem('tetrisHighScore') || 0);
       if (score > savedHighScore && score > 0) { 
         localStorage.setItem('tetrisHighScore', score); 
         els.recordBadge.style.display = 'inline-block'; 
-      } else {
-        els.recordBadge.style.display = 'none';
-      }
+      } else els.recordBadge.style.display = 'none';
       showOverlay('overlayGameover');
     }
 
@@ -454,9 +463,7 @@
       if (isPaused || gameOver || isClearing || !piece) return;
       while (!checkCollision(piece.matrix, { ...piece.pos, y: piece.pos.y + 1 })) { piece.pos.y++; score += 2; }
       els.canvas.classList.remove('shake'); void els.canvas.offsetWidth; els.canvas.classList.add('shake');
-      
-      if (score > currentHighScore) els.uiHighScore.innerText = currentHighScore = score; // 实时更新UI
-      
+      if (score > currentHighScore) els.uiHighScore.innerText = currentHighScore = score;
       updateUI(); lockPiece(); dropCounter = 0;
     }
 
@@ -538,7 +545,7 @@
           if (count) {
             lines += count; score += [0, 40, 100, 300, 1200][count] * level; level = (lines / 10 | 0) + 1;
             dropInterval = Math.max(100, 1000 - (level - 1) * 100);
-            if (score > currentHighScore) els.uiHighScore.innerText = currentHighScore = score; updateUI(); // 实时更新UI
+            if (score > currentHighScore) els.uiHighScore.innerText = currentHighScore = score; updateUI();
           }
           isClearing = false; piece = nextPiece; nextPiece = spawnPiece(); drawNext();
           if (checkCollision(piece.matrix, piece.pos)) triggerGameOver();
