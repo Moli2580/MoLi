@@ -404,8 +404,8 @@
 </head>
 <body>
   
-  <!-- 背景音乐 -->
-  <audio id="bgm" src="俄罗斯方块.mp3" loop></audio>
+  <!-- 背景音乐: 去掉原有的src和loop属性 -->
+  <audio id="bgm"></audio>
 
   <div id="game-area">
     <div id="pc-hints" aria-hidden="true">
@@ -452,11 +452,11 @@
         </div>
         <div class="menu-buttons">
           <div class="setting-item">
-            <div class="setting-header"><span>音乐音量</span><span id="bgm-val">100%</span></div>
+            <div class="setting-header"><span>音乐</span><span id="bgm-val">100%</span></div>
             <input type="range" id="bgm-slider" min="0" max="100" value="100">
           </div>
           <div class="setting-item">
-            <div class="setting-header"><span>音效音量</span><span id="sfx-val">100%</span></div>
+            <div class="setting-header"><span>音效</span><span id="sfx-val">100%</span></div>
             <input type="range" id="sfx-slider" min="0" max="100" value="100">
           </div>
           <div class="setting-item">
@@ -516,6 +516,21 @@
     const nextCanvas = document.getElementById('next-canvas');
     const nextCtx = nextCanvas.getContext('2d');
     const bgmAudio = document.getElementById('bgm');
+
+    // 播放列表及当前索引
+    const bgmPlaylist = [
+      "Ripples in the Matrix.mp3",
+      "Soothing Cubes.mp3",
+      "Dream of Blocks.mp3"
+    ];
+    let currentBgmIndex = 0;
+
+    // 当一首歌播放完毕时，自动播放列表中的下一首
+    bgmAudio.addEventListener('ended', () => {
+      currentBgmIndex = (currentBgmIndex + 1) % bgmPlaylist.length;
+      bgmAudio.src = bgmPlaylist[currentBgmIndex];
+      bgmAudio.play().catch(e => console.log("BGM auto-next prevented", e));
+    });
 
     const COLS = 10;
     const ROWS = 20;
@@ -626,7 +641,6 @@
       osc.type = type;
       osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
 
-      // 使用指数级（平方）衰减音频，让较小的滑块值能够真正减小听感音量
       const vol = baseVol * Math.pow(sfxVolume, 2); 
       gain.gain.setValueAtTime(vol, audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
@@ -648,7 +662,6 @@
       osc.frequency.setValueAtTime(400, now);
       osc.frequency.exponentialRampToValueAtTime(1200, now + 0.07);
       
-      // 使用指数级（平方）衰减音效音量
       const vol = 0.12 * Math.pow(sfxVolume, 2);
       gain.gain.setValueAtTime(vol, now);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
@@ -679,7 +692,6 @@
     }
 
     function applySettings() {
-      // 音乐音量使用指数曲线 (0.1 的平方是 0.01)，彻底解决低档位仍然声大的问题
       bgmAudio.volume = Math.pow(bgmVolume, 2);
       
       document.getElementById('bgm-slider').value = Math.round(bgmVolume * 100);
@@ -1140,7 +1152,9 @@
       initAudio();
       refreshHighScoreDisplay();
 
-      // 重置并播放BGM
+      // 开局随机挑选一首歌播放
+      currentBgmIndex = Math.floor(Math.random() * bgmPlaylist.length);
+      bgmAudio.src = bgmPlaylist[currentBgmIndex];
       bgmAudio.currentTime = 0;
       bgmAudio.play().catch(e => console.log("BGM autoplay prevented", e));
 
