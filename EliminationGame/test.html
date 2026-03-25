@@ -5,129 +5,249 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>俄罗斯方块</title>
   <style>
-    :root{ --bg: #1a1a2e; --panel: #16213e; --panel2: #0f3460; --accent: #e94560; --grid: #2a3b5c; --text: #fff; }
-    body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: sans-serif; touch-action: none; overflow: hidden; display: flex; flex-direction: column; height: 100vh; width: 100vw; }
-    #game-area { flex: 1; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box; gap: 15px; position: relative; }
-    canvas { background: var(--panel); border: 2px solid var(--panel2); border-radius: 4px; box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); }
+    /* 基础/经典主题变量 */
+    :root { 
+      --bg: #1a1a2e; --panel: #16213e; --panel2: #0f3460; --accent: #e94560; --grid: #2a3b5c; --text: #fff; 
+      --canvas-bg: var(--panel); --canvas-border: var(--panel2); --canvas-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+      --info-color: var(--accent); --info-shadow: 0 0 5px rgba(233, 69, 96, 0.5);
+      --menu-bg: rgba(0,0,0,0.85); --menu-wrap-bg: transparent; --menu-wrap-border: none; --menu-wrap-shadow: none; --menu-backdrop: none;
+      --btn-bg: var(--accent); --btn-border: none; --btn-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      --title-shadow: 0 0 10px rgba(233, 69, 96, 0.5); --title-color: var(--accent);
+      --hint-bg: rgba(15, 52, 96, 0.35); --hint-border: rgba(15, 52, 96, 0.9);
+      --list-hover: rgba(255,255,255,0.1); --list-active: rgba(233, 69, 96, 0.3); --list-border: rgba(255,255,255,0.1);
+    }
+    
+    /* 霓虹赛博朋克主题变量 */
+    body[data-theme="neon"] {
+      --bg: #0a0a10; --panel: rgba(15, 30, 50, 0.6); --panel2: rgba(25, 45, 75, 0.8); --neon: #00F0FF;
+      --canvas-bg: rgba(10, 15, 25, 0.7); --canvas-border: rgba(0, 240, 255, 0.25); --canvas-shadow: 0 0 25px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 240, 255, 0.15);
+      --info-color: var(--neon); --info-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+      --menu-bg: rgba(5, 5, 10, 0.85); --menu-wrap-bg: rgba(10, 20, 35, 0.85); --menu-wrap-border: 1px solid rgba(0, 240, 255, 0.3); --menu-wrap-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 25px rgba(0, 240, 255, 0.1); --menu-backdrop: blur(12px);
+      --btn-bg: linear-gradient(135deg, var(--accent), #b22c45); --btn-border: 1px solid rgba(255,255,255,0.3); --btn-shadow: 0 6px 12px rgba(0,0,0,0.4);
+      --title-shadow: 0 0 10px var(--neon), 0 0 20px var(--neon); --title-color: #fff;
+      --hint-bg: var(--panel); --hint-border: rgba(0,240,255,0.15);
+      --list-hover: rgba(0,240,255,0.15); --list-active: rgba(0,240,255,0.25); --list-border: rgba(0,240,255,0.2);
+    }
+
+    body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', Tahoma, sans-serif; touch-action: none; overflow: hidden; display: flex; flex-direction: column; height: 100vh; width: 100vw; transition: background 0.3s;}
+    body[data-theme="neon"] { background: radial-gradient(circle at 50% 30%, #1f2235 0%, var(--bg) 100%); }
+    body[data-theme="neon"]::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px); pointer-events: none; z-index: 999; opacity: 0.6; }
+
+    #game-area { flex: 1; display: flex; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box; gap: 15px; position: relative; z-index: 1; }
+    canvas { background: var(--canvas-bg); backdrop-filter: blur(8px); border: 2px solid var(--canvas-border); border-radius: 4px; box-shadow: var(--canvas-shadow); }
     @keyframes dropShake { 0%, 100% { transform: translateY(0); } 25% { transform: translateY(8px); } 50% { transform: translateY(-4px); } 75% { transform: translateY(2px); } }
     .shake { animation: dropShake 0.15s ease-out; }
+    
     #ui-panel { display: flex; flex-direction: column; gap: 12px; width: 80px; }
-    .info-box { background: var(--panel2); padding: 8px 4px; border-radius: 8px; text-align: center; font-size: 13px; font-weight: bold; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
-    .info-box span { display: block; font-size: 16px; color: var(--accent); margin-top: 4px; text-shadow: 0 0 5px rgba(233, 69, 96, 0.5); word-break: break-all; }
-    #next-canvas { width: 100%; }
-    .action-btn { background: var(--accent); color: white; border: none; border-radius: 8px; padding: 10px 5px; font-size: 14px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); cursor: pointer; margin-top: 5px; }
+    .info-box { background: var(--panel); backdrop-filter: blur(5px); padding: 8px 4px; border-radius: 8px; text-align: center; font-size: 13px; font-weight: bold; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+    body[data-theme="neon"] .info-box { border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 0 10px rgba(0,240,255,0.05); }
+    .info-box span { display: block; font-size: 16px; color: var(--info-color); margin-top: 4px; text-shadow: var(--info-shadow); word-break: break-all; transition: 0.3s; }
+    #next-canvas { width: 100%; border-radius: 4px; }
+    
+    .action-btn { background: var(--btn-bg); color: white; border: var(--btn-border); border-radius: 8px; padding: 10px 5px; font-size: 14px; font-weight: bold; box-shadow: var(--btn-shadow); cursor: pointer; margin-top: 5px; transition: transform 0.1s, filter 0.2s; }
     .action-btn:active { transform: translateY(2px); box-shadow: 0 2px 3px rgba(0,0,0,0.3); }
-    #controls { height: 180px; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; padding: 15px; background: var(--panel); border-top: 2px solid var(--panel2); padding-bottom: max(15px, env(safe-area-inset-bottom)); }
+    .action-btn:hover { filter: brightness(1.2); }
+    
+    #controls { height: 180px; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; padding: 15px; background: var(--panel); backdrop-filter: blur(10px); border-top: 2px solid var(--panel2); padding-bottom: max(15px, env(safe-area-inset-bottom)); z-index: 2;}
+    body[data-theme="neon"] #controls { border-top: 1px solid rgba(0,240,255,0.2); }
     .btn { background: var(--panel2); border: none; border-radius: 12px; color: var(--text); font-size: 24px; font-weight: bold; display: flex; justify-content: center; align-items: center; user-select: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.1s, background 0.1s; cursor: pointer; }
-    .btn:active, .btn.active { background: var(--accent); transform: translateY(2px); box-shadow: 0 2px 3px rgba(0,0,0,0.3); }
+    body[data-theme="neon"] .btn { border: 1px solid rgba(255,255,255,0.1); }
+    .btn:active, .btn.active { background: var(--btn-bg); transform: translateY(2px); box-shadow: 0 2px 3px rgba(0,0,0,0.5); }
     #btn-left { grid-column: 1; grid-row: 1 / span 2; } #btn-right { grid-column: 4; grid-row: 1 / span 2; } #btn-rotate { grid-column: 2 / span 2; grid-row: 1; }
     #btn-down { grid-column: 2; grid-row: 2; font-size: 20px;} #btn-hard { grid-column: 3; grid-row: 2; font-size: 20px;}
-    .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; }
-    .menu-wrapper { position: relative; width: 280px; height: 380px; }
-    #overlay-settings .menu-wrapper, #overlay-pause .menu-wrapper { height: 440px; }
-    .menu-header { position: absolute; top: 0; left: 0; width: 100%; height: 120px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-    .menu-header h1 { color: var(--accent); margin: 0; font-size: 36px; text-shadow: 0 0 10px rgba(233, 69, 96, 0.5); text-align: center; }
-    .menu-high-score-text { color: var(--text); font-size: 18px; margin: 15px 0 0 0; font-weight: bold; text-shadow: 0 0 5px rgba(0,0,0,0.5); }
-    .menu-high-score-text span { color: var(--accent); font-size: 22px; }
-    .menu-buttons { position: absolute; bottom: 0; left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 16px; }
-    .overlay button { padding: 15px 20px; font-size: 18px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: bold; margin: 0; width: 180px; box-sizing: border-box; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.4); transition: transform 0.1s, background 0.2s; }
+    
+    .overlay { position: absolute; inset: 0; background: var(--menu-bg); backdrop-filter: blur(4px); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; transition: 0.3s; }
+    .menu-wrapper { position: relative; width: 280px; height: 380px; background: var(--menu-wrap-bg); backdrop-filter: var(--menu-backdrop); border: var(--menu-wrap-border); border-radius: 16px; box-shadow: var(--menu-wrap-shadow); transition: 0.3s;}
+    #overlay-pause .menu-wrapper { height: 440px; }
+    #overlay-settings .menu-wrapper { height: 490px; }
+    .menu-header { position: absolute; top: 0; left: 0; width: 100%; height: 100px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    .menu-header h1 { color: var(--title-color); margin: 0; font-size: 32px; text-shadow: var(--title-shadow); text-align: center; }
+    .menu-high-score-text { color: #ccc; font-size: 16px; margin: 10px 0 0 0; font-weight: bold; }
+    .menu-high-score-text span { color: var(--accent); font-size: 20px; text-shadow: 0 0 8px rgba(233, 69, 96, 0.8); }
+    
+    .menu-buttons { position: absolute; bottom: 0; left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 16px; padding-bottom: 25px; }
+    .overlay button { padding: 15px 20px; font-size: 18px; background: var(--btn-bg); color: white; border: var(--btn-border); border-radius: 8px; font-weight: bold; margin: 0; width: 180px; box-sizing: border-box; cursor: pointer; box-shadow: var(--btn-shadow); transition: transform 0.1s, filter 0.2s; }
     .overlay button:active { transform: translateY(2px); }
+    .overlay button:hover { filter: brightness(1.2); }
     .overlay button.secondary { background: var(--panel2); }
-    .setting-item { width: 220px; background: var(--panel2); border-radius: 8px; padding: 15px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.4); }
-    .setting-header { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: bold; }
-    .setting-item input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-    .setting-item input[type=range]:focus { outline: none; }
-    .setting-item input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: var(--grid); border-radius: 3px; }
-    .setting-item input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; -webkit-appearance: none; margin-top: -5px; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
-    .toggle-row { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: bold; }
-    .toggle-row span.status { color: var(--accent); background: rgba(0,0,0,0.3); padding: 2px 10px; border-radius: 4px; cursor: pointer; user-select: none; }
-    .toggle-row.off span.status { color: #aaa; }
-    .score-display { text-align: center; background: rgba(15, 52, 96, 0.6); padding: 20px 0; border-radius: 12px; border: 1px solid var(--panel2); box-shadow: inset 0 0 15px rgba(0,0,0,0.3); width: 100%; box-sizing: border-box; }
-    .score-display p { margin: 0; font-size: 22px; font-weight: bold; }
-    .score-display .final-score { color: #fff; font-size: 28px; }
-    @keyframes pulse { from { transform: scale(1); box-shadow: 0 0 5px #ffd700; } to { transform: scale(1.1); box-shadow: 0 0 15px #ffd700; } }
-    #new-record-badge { display: none; background: #ffd700; color: #000; padding: 2px 6px; border-radius: 6px; font-size: 14px; margin-left: 10px; vertical-align: middle; animation: pulse 0.8s infinite alternate; }
-    #pc-hints { display: none; width: 220px; background: rgba(15, 52, 96, 0.35); border: 1px solid rgba(15, 52, 96, 0.9); border-radius: 12px; padding: 14px; box-shadow: inset 0 0 10px rgba(0,0,0,0.35); backdrop-filter: blur(6px); }
-    #pc-hints h3{ margin: 0 0 10px 0; font-size: 16px; color: #fff; text-align: center; }
-    .hint-row{ display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed rgba(255,255,255,0.15); font-size: 14px; }
+    body[data-theme="neon"] .overlay button.secondary { background: linear-gradient(135deg, #1a2a42, var(--panel2)); border-color: rgba(0, 240, 255, 0.2); }
+    
+    .setting-item { width: 220px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 15px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+    body[data-theme="classic"] .setting-item { background: var(--panel2); box-shadow: 0 4px 6px rgba(0,0,0,0.4); border: none; }
+    .setting-header { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: bold; color: #ddd; }
+    
+    input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; margin: 5px 0;}
+    input[type=range]:focus { outline: none; }
+    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: #0b0e17; border-radius: 3px; border: 1px solid rgba(255,255,255,0.1); }
+    body[data-theme="classic"] input[type=range]::-webkit-slider-runnable-track { background: var(--grid); border: none; }
+    input[type=range]::-webkit-slider-thumb { height: 18px; width: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; -webkit-appearance: none; margin-top: -7px; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+    body[data-theme="neon"] input[type=range]::-webkit-slider-thumb { background: var(--neon); box-shadow: 0 0 10px var(--neon); }
+    
+    .toggle-row { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: bold; color: #ddd; }
+    .toggle-row span.status { color: #fff; background: var(--accent); padding: 2px 10px; border-radius: 4px; cursor: pointer; user-select: none; box-shadow: 0 0 8px rgba(233, 69, 96, 0.6); transition: 0.3s; }
+    body[data-theme="classic"] .toggle-row span.status { background: rgba(0,0,0,0.3); color: var(--accent); box-shadow: none; }
+    .toggle-row.off span.status { background: #333; color: #888; box-shadow: none; }
+    
+    .score-display { text-align: center; background: rgba(0, 0, 0, 0.4); padding: 20px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 0 15px rgba(0,0,0,0.5); width: 85%; margin: 0 auto; box-sizing: border-box; }
+    body[data-theme="classic"] .score-display { background: rgba(15, 52, 96, 0.6); border: 1px solid var(--panel2); box-shadow: inset 0 0 15px rgba(0,0,0,0.3); }
+    .score-display p { margin: 0; font-size: 22px; font-weight: bold; color: #ccc;}
+    .score-display .final-score { color: var(--info-color); font-size: 32px; text-shadow: var(--info-shadow); }
+    
+    @keyframes pulse { from { transform: scale(1); box-shadow: 0 0 5px #ffd700; } to { transform: scale(1.1); box-shadow: 0 0 20px #ffd700; } }
+    #new-record-badge { display: none; background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; padding: 2px 8px; border-radius: 6px; font-size: 14px; margin-left: 10px; vertical-align: middle; animation: pulse 0.8s infinite alternate; border: 1px solid #fff; }
+    
+    #pc-hints { display: none; width: 220px; background: var(--hint-bg); border: 1px solid var(--hint-border); border-radius: 12px; padding: 14px; box-shadow: 0 8px 20px rgba(0,0,0,0.5), inset 0 0 15px rgba(0,240,255,0.05); backdrop-filter: blur(8px); transition: 0.3s;}
+    body[data-theme="classic"] #pc-hints { box-shadow: inset 0 0 10px rgba(0,0,0,0.35); backdrop-filter: blur(6px); }
+    #pc-hints h3{ margin: 0 0 10px 0; font-size: 16px; color: var(--title-color); text-align: center; text-shadow: 0 0 5px rgba(0,240,255,0.5); }
+    body[data-theme="classic"] #pc-hints h3 { color: #fff; text-shadow: none; }
+    .hint-row{ display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed rgba(255,255,255,0.1); font-size: 14px; color: #ccc; }
     .hint-row:last-child{ border-bottom: none; }
-    .keycap{ display: inline-flex; align-items: center; justify-content: center; min-width: 44px; padding: 4px 8px; border-radius: 8px; background: rgba(22,33,62,0.9); border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 3px 6px rgba(0,0,0,0.25); font-weight: 800; letter-spacing: 0.5px; }
+    .keycap{ display: inline-flex; align-items: center; justify-content: center; min-width: 44px; padding: 4px 8px; border-radius: 6px; background: linear-gradient(180deg, #2a3550, #16213e); border: 1px solid #4a5b82; border-bottom: 3px solid #0f1626; box-shadow: 0 4px 6px rgba(0,0,0,0.4); font-weight: 800; letter-spacing: 0.5px; color: #fff; }
+    body[data-theme="classic"] .keycap { background: rgba(22,33,62,0.9); border: 1px solid rgba(255,255,255,0.12); border-bottom: none; box-shadow: 0 3px 6px rgba(0,0,0,0.25); }
     .keycap.space{ min-width: 78px; }
+
+    /* --- 音乐播放器专属样式 --- */
+    
+    /* 入口按钮：严格正圆，尺寸缩小到40px */
+    .icon-btn-corner { position: absolute; bottom: 20px; left: 20px; background: var(--panel2); border: 1px solid var(--list-border); border-radius: 50%; width: 40px; height: 40px; font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: 0.2s; z-index: 20;}
+    body[data-theme="neon"] .icon-btn-corner { background: rgba(10, 20, 35, 0.8); backdrop-filter: blur(5px); box-shadow: 0 0 15px rgba(0,240,255,0.2); }
+    .icon-btn-corner:hover { transform: scale(1.1); }
+    .icon-btn-corner:active { transform: scale(0.95); }
+
+    /* 播放界面：扩大面板尺寸 */
+    #overlay-music .menu-wrapper { height: 580px; width: 340px; }
+    .music-content { position: absolute; top: 80px; left: 0; width: 100%; padding: 0 25px; box-sizing: border-box; display: flex; flex-direction: column; gap: 15px; }
+    .now-playing { font-size: 18px; font-weight: bold; color: var(--info-color); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: var(--info-shadow); background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border: 1px solid var(--list-border); }
+    
+    .music-controls { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
+    /* 控制按钮缩小 */
+    .ctrl-btn { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; transition: 0.2s; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+    .ctrl-btn:hover { transform: scale(1.1); color: var(--info-color); }
+    .ctrl-btn:active { transform: scale(0.9); }
+    .play-pause { font-size: 26px; color: var(--accent); }
+    body[data-theme="neon"] .play-pause { color: var(--neon); text-shadow: 0 0 10px var(--neon); }
+
+    .vol-row { display: flex; align-items: center; gap: 10px; font-size: 16px; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 20px; }
+    
+    /* 歌曲列表展示高度拉长 */
+    .playlist { flex: 1; height: 230px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid var(--list-border); border-radius: 8px; padding: 5px; }
+    .playlist::-webkit-scrollbar { width: 6px; }
+    .playlist::-webkit-scrollbar-track { background: transparent; }
+    .playlist::-webkit-scrollbar-thumb { background: var(--grid); border-radius: 3px; }
+    body[data-theme="neon"] .playlist::-webkit-scrollbar-thumb { background: rgba(0,240,255,0.3); }
+    
+    .playlist-item { padding: 10px; font-size: 14px; color: #ccc; cursor: pointer; border-radius: 6px; transition: 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+    .playlist-item:hover { background: var(--list-hover); color: #fff; }
+    .playlist-item.active { background: var(--list-active); color: #fff; font-weight: bold; border-left: 4px solid var(--info-color); }
+    
     @media (hover: hover) and (pointer: fine) and (min-width: 900px) {
       #controls{ display: none; } #pc-hints{ display: block; } #game-area{ gap: 22px; padding: 22px; }
       #ui-panel{ width: 110px; gap: 15px; } .info-box{ font-size: 15px; padding: 10px 5px;} .info-box span{ font-size: 20px; }
     }
   </style>
 </head>
-<body>
+<body data-theme="classic">
   <div id="game-area">
     <div id="pc-hints" aria-hidden="true">
-      <h3>按键提示</h3>
-      <div class="hint-row"><span class="keycap">A</span><span>向左</span></div>
-      <div class="hint-row"><span class="keycap">D</span><span>向右</span></div>
-      <div class="hint-row"><span class="keycap">W</span><span>旋转</span></div>
-      <div class="hint-row"><span class="keycap">S</span><span>下落</span></div>
-      <div class="hint-row"><span class="keycap space">Space</span><span>坠落</span></div>
+      <h3>操作指南</h3>
+      <div class="hint-row"><span class="keycap">A</span><span>向左平移</span></div>
+      <div class="hint-row"><span class="keycap">D</span><span>向右平移</span></div>
+      <div class="hint-row"><span class="keycap">W</span><span>顺时旋转</span></div>
+      <div class="hint-row"><span class="keycap">S</span><span>加速下落</span></div>
+      <div class="hint-row"><span class="keycap space">Space</span><span>瞬间坠落</span></div>
       <div class="hint-row"><span class="keycap">P</span><span>暂停/继续</span></div>
     </div>
     <canvas id="board"></canvas>
     <div id="ui-panel">
       <canvas id="next-canvas"></canvas>
       <div class="info-box">最高分 <span id="ui-high-score">0</span></div>
-      <div class="info-box">分数 <span id="score">0</span></div>
+      <div class="info-box">当前分 <span id="score">0</span></div>
       <div class="info-box">等级 <span id="level">1</span></div>
       <div class="info-box">行数 <span id="lines">0</span></div>
       <button class="action-btn" id="pause-btn">⏸ 暂停</button>
     </div>
+    
     <div id="overlay-start" class="overlay">
+      <button id="music-menu-btn" class="icon-btn-corner" title="音乐播放器">🎵</button>
       <div class="menu-wrapper">
-        <div class="menu-header"><h1>俄罗斯方块</h1><p class="menu-high-score-text">最高分: <span id="menu-high-score">0</span></p></div>
+        <div class="menu-header"><h1>俄罗斯方块</h1><p class="menu-high-score-text">最高纪录: <span id="menu-high-score">0</span></p></div>
         <div class="menu-buttons">
           <button id="start-normal-btn" class="secondary">普通模式</button>
-          <button id="start-easy-btn" class="secondary">简单模式</button>
-          <button id="settings-btn" class="secondary">设 置</button>
+          <button id="start-easy-btn" class="secondary">休闲模式</button>
+          <button id="settings-btn" class="secondary">游 戏 设 置</button>
         </div>
       </div>
     </div>
+    
+    <!-- 音乐播放器界面 -->
+    <div id="overlay-music" class="overlay" style="display: none;">
+      <div class="menu-wrapper">
+        <div class="menu-header"><h1>音乐电台</h1></div>
+        <div class="music-content">
+          <div class="now-playing" id="music-title">准备播放...</div>
+          <div class="music-controls">
+            <button id="music-mode-btn" class="ctrl-btn" title="播放模式">🔁</button>
+            <button id="music-prev-btn" class="ctrl-btn" title="上一首">⏮</button>
+            <button id="music-play-btn" class="ctrl-btn play-pause" title="播放/暂停">▶️</button>
+            <button id="music-next-btn" class="ctrl-btn" title="下一首">⏭</button>
+          </div>
+          <div class="vol-row">
+            <span>🔉</span>
+            <input type="range" id="music-vol-slider" min="0" max="100" value="100">
+          </div>
+          <div class="playlist" id="playlist-container">
+            <!-- 列表动态生成 -->
+          </div>
+        </div>
+        <div class="menu-buttons" style="padding-bottom: 15px;">
+          <button id="music-btn-back">返 回</button> 
+        </div>
+      </div>
+    </div>
+
     <div id="overlay-settings" class="overlay" style="display: none;">
       <div class="menu-wrapper">
         <div class="menu-header"><h1>设置</h1></div>
         <div class="menu-buttons">
           <div class="setting-item">
-            <div class="setting-header"><span>音乐</span><span id="bgm-val">100%</span></div>
+            <div class="setting-header"><span>背景音乐</span><span id="bgm-val">100%</span></div>
             <input type="range" id="bgm-slider" min="0" max="100" value="100">
           </div>
           <div class="setting-item">
-            <div class="setting-header"><span>音效</span><span id="sfx-val">100%</span></div>
+            <div class="setting-header"><span>游戏音效</span><span id="sfx-val">100%</span></div>
             <input type="range" id="sfx-slider" min="0" max="100" value="100">
           </div>
           <div class="setting-item">
-            <div class="toggle-row" id="toggle-grid-row"><span>网格</span><span class="status" id="grid-status">开</span></div>
+            <div class="toggle-row" id="toggle-grid-row"><span>显示网格</span><span class="status" id="grid-status">开</span></div>
+          </div>
+          <div class="setting-item">
+            <div class="toggle-row" id="toggle-theme-row"><span>主题风格</span><span class="status" id="theme-status">经典</span></div>
           </div>
           <button id="menu-btn-settings">返 回</button> 
         </div>
       </div>
     </div>
+    
     <div id="overlay-pause" class="overlay" style="display: none;">
       <div class="menu-wrapper">
-        <div class="menu-header"><h1>游戏暂停</h1></div>
+        <div class="menu-header"><h1>游戏已暂停</h1></div>
         <div class="menu-buttons">
-          <button id="resume-btn" class="secondary">继续游戏</button>
-          <button id="restart-btn" class="secondary">重新开始</button>
-          <button id="pause-settings-btn" class="secondary">设 置</button> 
-          <button id="menu-btn-pause">返回菜单</button>
+          <button id="resume-btn" class="secondary">继 续 游 戏</button>
+          <button id="restart-btn" class="secondary">重 新 开 始</button>
+          <button id="pause-settings-btn" class="secondary">游 戏 设 置</button> 
+          <button id="menu-btn-pause">返 回 菜 单</button>
         </div>
       </div>
     </div>
     <div id="overlay-gameover" class="overlay" style="display: none;">
       <div class="menu-wrapper" style="height: 400px;">
-        <div class="menu-header" style="height: 100px;"><h1>游戏结束</h1></div>
+        <div class="menu-header" style="height: 100px;"><h1>局局结束</h1></div>
         <div class="score-display" style="position: absolute; top: 120px;">
           <p class="final-score">得分: <span id="final-score-val">0</span><span id="new-record-badge">新纪录!</span></p>
         </div>
         <div class="menu-buttons">
-          <button id="retry-btn" class="secondary">再来一局</button>
-          <button id="menu-btn-gameover">返回菜单</button>
+          <button id="retry-btn" class="secondary">再 战 一 局</button>
+          <button id="menu-btn-gameover">返 回 菜 单</button>
         </div>
       </div>
     </div>
@@ -146,44 +266,18 @@
     const COLS = 10, ROWS = 20;
     let BLOCK_SIZE = 20;
 
-    const bgmPlaylist = ["Ripples in the Matrix.mp3", "Soothing Cubes.mp3", "Dream of Blocks.mp3", "Critical Mass.mp3", "Rhythm of Lines.mp3", "Land of Illusions.mp3"];
-    let currentBgmIndex = 0, activePlayerIndex = 0;
-    const audioPlayers = [new Audio(), new Audio()];
+    const COLORS_CLASSIC = [null, '#00E5FF', '#2962FF', '#FF6D00', '#FFD600', '#00E676', '#D500F9', '#FF1744'];
+    const COLORS_NEON = [null, '#00FFFF', '#0055FF', '#FF8800', '#FFFF00', '#00FF00', '#FF00FF', '#FF0055'];
     
-    audioPlayers.forEach(p => {
-      p.preload = 'auto';
-      p.addEventListener('ended', () => {
-        activePlayerIndex = 1 - activePlayerIndex;
-        let nextPlayer = audioPlayers[activePlayerIndex];
-        currentBgmIndex = (currentBgmIndex + 1) % bgmPlaylist.length;
-        nextPlayer.currentTime = 0;
-        nextPlayer.play().catch(e => {});
-        audioPlayers[1 - activePlayerIndex].src = bgmPlaylist[(currentBgmIndex + 1) % bgmPlaylist.length];
-        audioPlayers[1 - activePlayerIndex].load();
-      });
-    });
-
-    const getActiveAudio = () => audioPlayers[activePlayerIndex];
-    function startRandomBgm() {
-      audioPlayers.forEach(p => p.pause());
-      currentBgmIndex = Math.floor(Math.random() * bgmPlaylist.length);
-      activePlayerIndex = 0;
-      audioPlayers[0].src = bgmPlaylist[currentBgmIndex];
-      audioPlayers[0].currentTime = 0;
-      audioPlayers[0].play().catch(e => {});
-      audioPlayers[1].src = bgmPlaylist[(currentBgmIndex + 1) % bgmPlaylist.length];
-      audioPlayers[1].load();
-    }
-
-    const COLORS = [null, '#00E5FF', '#2962FF', '#FF6D00', '#FFD600', '#00E676', '#D500F9', '#FF1744'];
     const SHAPES = [ [], [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], [[2,0,0],[2,2,2],[0,0,0]], [[0,0,3],[3,3,3],[0,0,0]], [[4,4],[4,4]], [[0,5,5],[5,5,0],[0,0,0]], [[0,6,0],[6,6,6],[0,0,0]], [[7,7,0],[0,7,7],[0,0,0]] ];
 
     let board = [], piece = null, nextPiece = null, bag = [];
     let score = 0, lines = 0, level = 1, currentHighScore = 0;
     let dropCounter = 0, dropInterval = 1000, lastTime = 0, reqAnimId = null;
     let gameOver = false, isPaused = false, gameMode = 'normal', previousMenu = 'start';
-    let isClearing = false, clearAnim = { rows: [], start: 0, duration: 220, phase: 0 };
+    let isClearing = false, clearAnim = { rows: [], start: 0, duration: 240, phase: 0 };
     
+    let currentTheme = localStorage.getItem('tetrisTheme') || 'classic';
     let bgmVolume = parseFloat(localStorage.getItem('tetrisBgmVol')) ?? 1.0;
     let sfxVolume = parseFloat(localStorage.getItem('tetrisSfxVol')) ?? 1.0;
     if (isNaN(bgmVolume)) bgmVolume = 1.0;
@@ -191,57 +285,98 @@
     let gridEnabled = localStorage.getItem('tetrisGrid') !== 'false';
     const IS_PC = matchMedia('(hover: hover) and (pointer: fine)').matches;
 
-    function initBag() {
-      bag = [1, 2, 3, 4, 5, 6, 7];
-      for (let i = bag.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [bag[i], bag[j]] = [bag[j], bag[i]];
+    // === 音频系统 ===
+    const bgmPlaylist = ["Ripples in the Matrix.mp3", "Soothing Cubes.mp3", "Dream of Blocks.mp3", "Critical Mass.mp3", "Rhythm of Lines.mp3", "Land of Illusions.mp3"];
+    let currentBgmIndex = Math.floor(Math.random() * bgmPlaylist.length);
+    const bgmPlayer = new Audio();
+    bgmPlayer.preload = 'auto';
+    
+    let playMode = parseInt(localStorage.getItem('tetrisPlayMode') || '0', 10); 
+    const modeIcons = ['🔁', '🔂', '🔀'];
+    
+    function initPlaylistDOM() {
+      const container = $('playlist-container');
+      container.innerHTML = '';
+      bgmPlaylist.forEach((filename, idx) => {
+        const div = document.createElement('div');
+        div.className = 'playlist-item';
+        div.innerText = `${idx + 1}. ${filename.replace('.mp3', '')}`;
+        div.onclick = () => playTrack(idx);
+        container.appendChild(div);
+      });
+      updatePlayerUI();
+    }
+
+    function playTrack(idx, forcePlay = true) {
+      currentBgmIndex = idx;
+      bgmPlayer.src = bgmPlaylist[idx];
+      bgmPlayer.volume = bgmVolume * bgmVolume;
+      updatePlayerUI();
+      if (forcePlay) {
+        bgmPlayer.play().then(() => updatePlayerUI()).catch(e => console.log("等待交互: ", e));
       }
     }
 
-    function randomPiece() {
-      if (!bag.length) initBag();
-      const m = SHAPES[bag.pop()];
-      return { matrix: m, pos: { x: Math.floor(COLS / 2) - Math.floor(m.length / 2), y: 0 } };
+    function toggleMusic() {
+      if (bgmPlayer.paused) bgmPlayer.play().then(() => updatePlayerUI());
+      else { bgmPlayer.pause(); updatePlayerUI(); }
     }
+
+    function nextTrack() {
+      let nextIdx;
+      if (playMode === 2) nextIdx = Math.floor(Math.random() * bgmPlaylist.length);
+      else nextIdx = (currentBgmIndex + 1) % bgmPlaylist.length;
+      playTrack(nextIdx);
+    }
+
+    function prevTrack() {
+      let prevIdx = currentBgmIndex - 1;
+      if (prevIdx < 0) prevIdx = bgmPlaylist.length - 1;
+      playTrack(prevIdx);
+    }
+
+    bgmPlayer.addEventListener('ended', () => {
+      if (playMode === 1) playTrack(currentBgmIndex); 
+      else nextTrack(); 
+    });
+
+    function updatePlayerUI() {
+      $('music-title').innerText = bgmPlaylist[currentBgmIndex].replace('.mp3', '');
+      $('music-play-btn').innerText = bgmPlayer.paused ? '▶️' : '⏸';
+      $('music-mode-btn').innerText = modeIcons[playMode];
+      
+      const items = document.querySelectorAll('.playlist-item');
+      items.forEach((el, i) => {
+        if (i === currentBgmIndex) el.classList.add('active');
+        else el.classList.remove('active');
+      });
+    }
+
+    $('music-mode-btn').onclick = () => { playMode = (playMode + 1) % 3; localStorage.setItem('tetrisPlayMode', playMode); updatePlayerUI(); };
+    $('music-play-btn').onclick = toggleMusic;
+    $('music-prev-btn').onclick = prevTrack;
+    $('music-next-btn').onclick = nextTrack;
+
+    function initBag() { bag = [1, 2, 3, 4, 5, 6, 7]; for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; } }
+    function randomPiece() { if (!bag.length) initBag(); const m = SHAPES[bag.pop()]; return { matrix: m, pos: { x: Math.floor(COLS / 2) - Math.floor(m.length / 2), y: 0 } }; }
 
     let audioCtx = null;
-    function initAudio() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-    }
+    function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
+    function playTone(freq, type, duration, baseVol = 0.1) { if (sfxVolume <= 0 || !audioCtx || audioCtx.state !== 'running') return; const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(), t = audioCtx.currentTime; osc.type = type; osc.frequency.setValueAtTime(freq, t); gain.gain.setValueAtTime(baseVol * sfxVolume * sfxVolume, t); gain.gain.exponentialRampToValueAtTime(0.001, t + duration); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(t + duration); }
+    function playPop() { if (sfxVolume <= 0 || !audioCtx || audioCtx.state !== 'running') return; const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(), t = audioCtx.currentTime; osc.type = 'sine'; osc.frequency.setValueAtTime(400, t); osc.frequency.exponentialRampToValueAtTime(1200, t + 0.07); gain.gain.setValueAtTime(0.12 * sfxVolume * sfxVolume, t); gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.1); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(t + 0.1); }
+    const SFX = { move: () => playTone(800, 'sine', 0.05, 0.08), rotate: () => { playTone(600, 'triangle', 0.05, 0.1); setTimeout(() => playTone(900, 'triangle', 0.08, 0.1), 30); }, lock: playPop, clear: () => [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.3, 0.15), i * 40)) };
 
-    function playTone(freq, type, duration, baseVol = 0.1) {
-      if (sfxVolume <= 0 || !audioCtx || audioCtx.state !== 'running') return;
-      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(), t = audioCtx.currentTime;
-      osc.type = type; osc.frequency.setValueAtTime(freq, t);
-      gain.gain.setValueAtTime(baseVol * sfxVolume * sfxVolume, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-      osc.connect(gain); gain.connect(audioCtx.destination);
-      osc.start(); osc.stop(t + duration);
-    }
-
-    function playPop() {
-      if (sfxVolume <= 0 || !audioCtx || audioCtx.state !== 'running') return;
-      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(), t = audioCtx.currentTime;
-      osc.type = 'sine'; osc.frequency.setValueAtTime(400, t); osc.frequency.exponentialRampToValueAtTime(1200, t + 0.07);
-      gain.gain.setValueAtTime(0.12 * sfxVolume * sfxVolume, t); gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
-      osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(t + 0.1);
-    }
-
-    const SFX = {
-      move: () => playTone(800, 'sine', 0.05, 0.08),
-      rotate: () => { playTone(600, 'triangle', 0.05, 0.1); setTimeout(() => playTone(900, 'triangle', 0.08, 0.1), 30); },
-      lock: playPop,
-      clear: () => [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.3, 0.15), i * 40))
-    };
-
-    function applySettings() {
-      audioPlayers.forEach(p => p.volume = bgmVolume * bgmVolume);
-      $('bgm-slider').value = Math.round(bgmVolume * 100); $('bgm-val').innerText = Math.round(bgmVolume * 100) + '%';
-      $('sfx-slider').value = Math.round(sfxVolume * 100); $('sfx-val').innerText = Math.round(sfxVolume * 100) + '%';
-      $('toggle-grid-row').className = gridEnabled ? 'toggle-row' : 'toggle-row off';
-      $('grid-status').innerText = gridEnabled ? '开' : '关';
+    function applySettings() { 
+      document.body.setAttribute('data-theme', currentTheme);
+      $('theme-status').innerText = currentTheme === 'neon' ? '霓虹' : '经典';
+      
+      const volMap = Math.round(bgmVolume * 100);
+      bgmPlayer.volume = bgmVolume * bgmVolume; 
+      $('bgm-slider').value = volMap; $('bgm-val').innerText = volMap + '%'; 
+      $('music-vol-slider').value = volMap;
+      
+      $('sfx-slider').value = Math.round(sfxVolume * 100); $('sfx-val').innerText = Math.round(sfxVolume * 100) + '%'; 
+      $('toggle-grid-row').className = gridEnabled ? 'toggle-row' : 'toggle-row off'; $('grid-status').innerText = gridEnabled ? '开' : '关'; 
     }
 
     function resize() {
@@ -261,21 +396,9 @@
 
     const createMatrix = (w, h) => Array.from({length: h}, () => Array(w).fill(0));
     const rotateMatrix = m => m[0].map((_, i) => m.map(r => r[i]).reverse());
-
-    function checkCollision(m, pos) {
-      for (let y = 0; y < m.length; ++y)
-        for (let x = 0; x < m[y].length; ++x)
-          if (m[y][x] && (board[y + pos.y] && board[y + pos.y][x + pos.x]) !== 0) return true;
-      return false;
-    }
-
-    function merge() {
-      piece.matrix.forEach((r, y) => r.forEach((v, x) => { if (v) board[y + piece.pos.y][x + piece.pos.x] = v; }));
-    }
-
-    function findFullRows() {
-      return board.map((r, i) => r.every(v => v) ? i : -1).filter(i => i !== -1);
-    }
+    const checkCollision = (m, pos) => m.some((r, y) => r.some((v, x) => v && (board[y + pos.y] && board[y + pos.y][x + pos.x]) !== 0));
+    const merge = () => piece.matrix.forEach((r, y) => r.forEach((v, x) => { if (v) board[y + piece.pos.y][x + piece.pos.x] = v; }));
+    const findFullRows = () => board.map((r, i) => r.every(v => v) ? i : -1).filter(i => i !== -1);
 
     function updateScoreAndLevel(lc) {
       if (!lc) return;
@@ -286,105 +409,91 @@
       dropInterval = Math.max(100, 1000 - (level - 1) * 100);
     }
 
-    function triggerGameOver() {
-      gameOver = true; getActiveAudio().pause();
-      $('final-score-val').innerText = score;
-      let sh = parseInt(localStorage.getItem('tetrisHighScore') || '0', 10);
-      $('new-record-badge').style.display = (score > sh && score > 0) ? (localStorage.setItem('tetrisHighScore', score), 'inline-block') : 'none';
-      $('overlay-gameover').style.display = 'flex';
-    }
+    function triggerGameOver() { gameOver = true; bgmPlayer.pause(); updatePlayerUI(); $('final-score-val').innerText = score; let sh = parseInt(localStorage.getItem('tetrisHighScore') || '0', 10); $('new-record-badge').style.display = (score > sh && score > 0) ? (localStorage.setItem('tetrisHighScore', score), 'inline-block') : 'none'; $('overlay-gameover').style.display = 'flex'; }
 
     function lockPiece() {
-      merge();
-      const rows = findFullRows();
-      if (rows.length) {
-        isClearing = true; clearAnim = { rows, start: performance.now(), duration: 220, phase: 0 }; SFX.clear();
-      } else {
-        SFX.lock(); piece = nextPiece; nextPiece = randomPiece(); drawNext();
-        if (checkCollision(piece.matrix, piece.pos)) triggerGameOver();
-      }
+      merge(); const rows = findFullRows();
+      if (rows.length) { isClearing = true; clearAnim = { rows, start: performance.now(), duration: 240, phase: 0 }; SFX.clear(); }
+      else { SFX.lock(); piece = nextPiece; nextPiece = randomPiece(); drawNext(); if (checkCollision(piece.matrix, piece.pos)) triggerGameOver(); }
     }
 
-    function playerDrop(isManual = false) {
-      if (isPaused || gameOver || isClearing || !piece) return;
-      piece.pos.y++;
-      if (checkCollision(piece.matrix, piece.pos)) { piece.pos.y--; lockPiece(); } else if (isManual) SFX.move();
-      dropCounter = 0;
-    }
+    function playerDrop(isManual = false) { if (isPaused || gameOver || isClearing || !piece) return; piece.pos.y++; if (checkCollision(piece.matrix, piece.pos)) { piece.pos.y--; lockPiece(); } else if (isManual) SFX.move(); dropCounter = 0; }
+    function playerHardDrop() { if (isPaused || gameOver || isClearing || !piece) return; while (!checkCollision(piece.matrix, { x: piece.pos.x, y: piece.pos.y + 1 })) { piece.pos.y++; score += 2; } canvas.classList.remove('shake'); void canvas.offsetWidth; canvas.classList.add('shake'); $('score').innerText = score; if (score > currentHighScore) $('ui-high-score').innerText = currentHighScore = score; lockPiece(); dropCounter = 0; }
+    function playerMove(dir) { if (isPaused || gameOver || isClearing || !piece) return; piece.pos.x += dir; checkCollision(piece.matrix, piece.pos) ? piece.pos.x -= dir : SFX.move(); }
+    function playerRotate() { if (isPaused || gameOver || isClearing || !piece) return; const r = rotateMatrix(piece.matrix), pos = piece.pos.x; let off = 1; while (checkCollision(r, piece.pos)) { piece.pos.x += off; off = -(off + (off > 0 ? 1 : -1)); if (off > piece.matrix[0].length) { piece.pos.x = pos; return; } } piece.matrix = r; SFX.rotate(); }
 
-    function playerHardDrop() {
-      if (isPaused || gameOver || isClearing || !piece) return;
-      while (!checkCollision(piece.matrix, { x: piece.pos.x, y: piece.pos.y + 1 })) { piece.pos.y++; score += 2; }
-      canvas.classList.remove('shake'); void canvas.offsetWidth; canvas.classList.add('shake');
-      $('score').innerText = score;
-      if (score > currentHighScore) $('ui-high-score').innerText = currentHighScore = score;
-      lockPiece(); dropCounter = 0;
-    }
-
-    function playerMove(dir) {
-      if (isPaused || gameOver || isClearing || !piece) return;
-      piece.pos.x += dir;
-      checkCollision(piece.matrix, piece.pos) ? piece.pos.x -= dir : SFX.move();
-    }
-
-    function playerRotate() {
-      if (isPaused || gameOver || isClearing || !piece) return;
-      const r = rotateMatrix(piece.matrix), pos = piece.pos.x;
-      let off = 1;
-      while (checkCollision(r, piece.pos)) {
-        piece.pos.x += off; off = -(off + (off > 0 ? 1 : -1));
-        if (off > piece.matrix[0].length) { piece.pos.x = pos; return; }
-      }
-      piece.matrix = r; SFX.rotate();
-    }
+    const getColors = () => currentTheme === 'neon' ? COLORS_NEON : COLORS_CLASSIC;
 
     function draw3DBlock(c, x, y, s, color, alpha = 1, scale = 1) {
       const p = 1, a = (s - p * 2) * scale, px = x + p + (s - p * 2 - a) / 2, py = y + p + (s - p * 2 - a) / 2, e = Math.max(2, a * 0.15);
       c.save(); c.globalAlpha = alpha; c.fillStyle = color; c.fillRect(px, py, a, a);
       const poly = (f, pts) => { c.fillStyle = f; c.beginPath(); c.moveTo(...pts[0]); pts.slice(1).forEach(pt => c.lineTo(...pt)); c.fill(); };
-      poly('rgba(255,255,255,0.4)', [[px,py], [px+a,py], [px+a-e,py+e], [px+e,py+e]]);
-      poly('rgba(255,255,255,0.2)', [[px,py], [px+e,py+e], [px+e,py+a-e], [px,py+a]]);
-      poly('rgba(0,0,0,0.2)', [[px+a,py], [px+a,py+a], [px+a-e,py+a-e], [px+a-e,py+e]]);
-      poly('rgba(0,0,0,0.4)', [[px,py+a], [px+a,py+a], [px+a-e,py+a-e], [px+e,py+a-e]]);
-      c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(px+e, py+e, a-e*2, (a-e*2)*0.4);
-      c.strokeStyle = 'rgba(0,0,0,0.55)'; c.lineWidth = 1; c.strokeRect(px, py, a, a); c.restore();
+      
+      if (currentTheme === 'neon') {
+        poly('rgba(255,255,255,0.6)', [[px,py], [px+a,py], [px+a-e,py+e], [px+e,py+e]]);
+        poly('rgba(255,255,255,0.3)', [[px,py], [px+e,py+e], [px+e,py+a-e], [px,py+a]]);
+        poly('rgba(0,0,0,0.4)', [[px+a,py], [px+a,py+a], [px+a-e,py+a-e], [px+a-e,py+e]]);
+        poly('rgba(0,0,0,0.6)', [[px,py+a], [px+a,py+a], [px+a-e,py+a-e], [px+e,py+a-e]]);
+        c.fillStyle = 'rgba(255,255,255,0.4)'; c.fillRect(px+e, py+e, a-e*2, (a-e*2)*0.25);
+        c.fillStyle = 'rgba(0,0,0,0.2)'; c.fillRect(px+e, py+a-e-(a-e*2)*0.25, a-e*2, (a-e*2)*0.25);
+        c.strokeStyle = 'rgba(0,0,0,0.8)'; c.lineWidth = 1; c.strokeRect(px, py, a, a);
+      } else {
+        poly('rgba(255,255,255,0.4)', [[px,py], [px+a,py], [px+a-e,py+e], [px+e,py+e]]);
+        poly('rgba(255,255,255,0.2)', [[px,py], [px+e,py+e], [px+e,py+a-e], [px,py+a]]);
+        poly('rgba(0,0,0,0.2)', [[px+a,py], [px+a,py+a], [px+a-e,py+a-e], [px+a-e,py+e]]);
+        poly('rgba(0,0,0,0.4)', [[px,py+a], [px+a,py+a], [px+a-e,py+a-e], [px+e,py+a-e]]);
+        c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(px+e, py+e, a-e*2, (a-e*2)*0.4);
+        c.strokeStyle = 'rgba(0,0,0,0.55)'; c.lineWidth = 1; c.strokeRect(px, py, a, a);
+      }
+      c.restore();
     }
 
-    const drawMatrix = (m, off, c = ctx, s = BLOCK_SIZE) => m.forEach((r, y) => r.forEach((v, x) => v && draw3DBlock(c, (x + off.x) * s, (y + off.y) * s, s, COLORS[v])));
+    const drawMatrix = (m, off, c = ctx, s = BLOCK_SIZE) => m.forEach((r, y) => r.forEach((v, x) => v && draw3DBlock(c, (x + off.x) * s, (y + off.y) * s, s, getColors()[v])));
 
     function drawGrid() {
       if (!gridEnabled) return;
-      ctx.strokeStyle = '#2a3b5c'; ctx.lineWidth = 1; ctx.beginPath();
-      for (let i = 0; i <= COLS; i++) { ctx.moveTo(i * BLOCK_SIZE, 0); ctx.lineTo(i * BLOCK_SIZE, ROWS * BLOCK_SIZE); }
-      for (let i = 0; i <= ROWS; i++) { ctx.moveTo(0, i * BLOCK_SIZE); ctx.lineTo(COLS * BLOCK_SIZE, i * BLOCK_SIZE); }
-      ctx.stroke();
+      if (currentTheme === 'neon') {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        for (let x = 1; x < COLS; x++) for (let y = 1; y < ROWS; y++) ctx.fillRect(x * BLOCK_SIZE - 1, y * BLOCK_SIZE - 1, 2, 2);
+      } else {
+        ctx.strokeStyle = '#2a3b5c'; ctx.lineWidth = 1; ctx.beginPath();
+        for (let i = 0; i <= COLS; i++) { ctx.moveTo(i * BLOCK_SIZE, 0); ctx.lineTo(i * BLOCK_SIZE, ROWS * BLOCK_SIZE); }
+        for (let i = 0; i <= ROWS; i++) { ctx.moveTo(0, i * BLOCK_SIZE); ctx.lineTo(COLS * BLOCK_SIZE, i * BLOCK_SIZE); }
+        ctx.stroke();
+      }
     }
 
-    const drawNext = () => {
-      const s = IS_PC ? 110 : 80; nextCtx.clearRect(0, 0, s, s);
-      if (nextPiece) drawMatrix(nextPiece.matrix, { x: (s - nextPiece.matrix[0].length * 20) / 40, y: (s - nextPiece.matrix.length * 20) / 40 }, nextCtx, 20);
-    };
+    const drawNext = () => { const s = IS_PC ? 110 : 80; nextCtx.clearRect(0, 0, s, s); if (nextPiece) drawMatrix(nextPiece.matrix, { x: (s - nextPiece.matrix[0].length * 20) / 40, y: (s - nextPiece.matrix.length * 20) / 40 }, nextCtx, 20); };
 
     function drawBoardWithClearAnim() {
       const cr = new Set(clearAnim.rows), t = clearAnim.phase, eo = 1 - Math.pow(1 - t, 3), f = Math.sin(Math.min(1, t * 2) * Math.PI) * 0.35;
       const a = t < 0.55 ? 1 : 1 - (t - 0.55) / 0.45, s = t < 0.55 ? 1 : (1 - (t - 0.55) / 0.45) * 0.55 + 0.45;
       for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
         const v = board[y][x];
-        if (v) cr.has(y) ? (draw3DBlock(ctx, x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, COLORS[v], Math.max(0, a), s), ctx.save(), ctx.globalAlpha = Math.max(0, a) * 0.55 + f, ctx.fillStyle = 'rgba(255,255,255,0.85)', ctx.fillRect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4), ctx.restore()) : draw3DBlock(ctx, x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, COLORS[v]);
+        if (v) cr.has(y) ? (draw3DBlock(ctx, x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, getColors()[v], Math.max(0, a), s), ctx.save(), ctx.globalAlpha = Math.max(0, a) * 0.55 + f, ctx.fillStyle = '#fff', ctx.fillRect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4), ctx.restore()) : draw3DBlock(ctx, x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, getColors()[v]);
       }
-      ctx.save(); ctx.globalAlpha = 0.25 * (1 - eo); ctx.fillStyle = 'rgba(255,255,255,0.7)';
-      clearAnim.rows.forEach(y => ctx.fillRect(0, y * BLOCK_SIZE + BLOCK_SIZE * 0.35, COLS * BLOCK_SIZE, BLOCK_SIZE * 0.25));
-      ctx.restore();
+      
+      if (currentTheme === 'neon') {
+        ctx.save(); ctx.shadowBlur = 15; ctx.shadowColor = '#00F0FF'; ctx.fillStyle = `rgba(255, 255, 255, ${1 - eo})`; 
+        clearAnim.rows.forEach(y => { const h = BLOCK_SIZE * (0.8 - eo * 0.8); ctx.fillRect(0, y * BLOCK_SIZE + BLOCK_SIZE / 2 - h / 2, COLS * BLOCK_SIZE, h); }); ctx.restore();
+      } else {
+        ctx.save(); ctx.globalAlpha = 0.25 * (1 - eo); ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        clearAnim.rows.forEach(y => ctx.fillRect(0, y * BLOCK_SIZE + BLOCK_SIZE * 0.35, COLS * BLOCK_SIZE, BLOCK_SIZE * 0.25)); ctx.restore();
+      }
     }
 
     function drawGhost() {
       if (gameMode !== 'easy' || !piece || isClearing || gameOver || isPaused) return;
-      const g = { ...piece.pos };
-      while (!checkCollision(piece.matrix, { x: g.x, y: g.y + 1 })) g.y++;
-      ctx.save(); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.fillStyle = 'rgba(255,255,255,0.03)';
-      piece.matrix.forEach((r, y) => r.forEach((v, x) => {
-        if (v) { const px = (x + g.x) * BLOCK_SIZE + 1, py = (y + g.y) * BLOCK_SIZE + 1, s = BLOCK_SIZE - 2; ctx.strokeRect(px, py, s, s); ctx.fillRect(px, py, s, s); }
-      })); ctx.restore();
+      const g = { ...piece.pos }; while (!checkCollision(piece.matrix, { x: g.x, y: g.y + 1 })) g.y++;
+      ctx.save(); ctx.lineWidth = 2; 
+      if (currentTheme === 'neon') {
+        ctx.setLineDash([4, 4]); const pulse = 0.3 + Math.sin(Date.now() / 150) * 0.2;
+        ctx.strokeStyle = `rgba(0, 240, 255, ${pulse})`; ctx.fillStyle = `rgba(0, 240, 255, ${pulse * 0.1})`;
+      } else {
+        ctx.setLineDash([]); ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+      }
+      piece.matrix.forEach((r, y) => r.forEach((v, x) => { if (v) { const px = (x + g.x) * BLOCK_SIZE + 1, py = (y + g.y) * BLOCK_SIZE + 1, s = BLOCK_SIZE - 2; ctx.strokeRect(px, py, s, s); ctx.fillRect(px, py, s, s); } })); 
+      ctx.restore();
     }
 
     function draw() {
@@ -394,80 +503,93 @@
     }
 
     function update(time = 0) {
-      if (gameOver || isPaused || $('overlay-start').style.display !== 'none' || $('overlay-settings').style.display !== 'none') return;
+      if (gameOver || isPaused || $('overlay-start').style.display !== 'none' || $('overlay-settings').style.display !== 'none' || $('overlay-music').style.display !== 'none') return;
       dropCounter += time - lastTime; lastTime = time;
       if (isClearing) {
         if ((clearAnim.phase = Math.min(1, (time - clearAnim.start) / clearAnim.duration)) >= 1) {
           clearAnim.rows.slice().sort((a,b)=>a-b).forEach(y => board.unshift(board.splice(y, 1)[0].fill(0)));
-          updateScoreAndLevel(clearAnim.rows.length);
-          isClearing = false; clearAnim.rows = []; piece = nextPiece; nextPiece = randomPiece(); drawNext();
-          if (checkCollision(piece.matrix, piece.pos)) { triggerGameOver(); draw(); return; }
-          dropCounter = 0;
+          updateScoreAndLevel(clearAnim.rows.length); isClearing = false; clearAnim.rows = []; piece = nextPiece; nextPiece = randomPiece(); drawNext();
+          if (checkCollision(piece.matrix, piece.pos)) { triggerGameOver(); draw(); return; } dropCounter = 0;
         }
       } else if (dropCounter > dropInterval) playerDrop();
       draw(); reqAnimId = requestAnimationFrame(update);
     }
 
     function startGame(m) { gameMode = m; resetGame(); }
-
     function resetGame() {
       initAudio(); $('menu-high-score').innerText = $('ui-high-score').innerText = currentHighScore = parseInt(localStorage.getItem('tetrisHighScore') || '0', 10);
-      startRandomBgm();
+      
+      if (!bgmPlayer.src) playTrack(Math.floor(Math.random() * bgmPlaylist.length), true);
+      else if (bgmPlayer.paused) bgmPlayer.play().then(()=>updatePlayerUI()).catch(()=>{});
+      
       board = createMatrix(COLS, ROWS); score = lines = dropCounter = 0; level = 1; dropInterval = 1000; bag = [];
-      $('score').innerText = score; $('lines').innerText = lines; $('level').innerText = level;
-      piece = randomPiece(); nextPiece = randomPiece(); drawNext();
-      gameOver = isPaused = isClearing = false; clearAnim = { rows: [], start: 0, duration: 220, phase: 0 };
-      lastTime = performance.now();
-      ['overlay-start', 'overlay-settings', 'overlay-pause', 'overlay-gameover'].forEach(id => $(id).style.display = 'none');
+      $('score').innerText = score; $('lines').innerText = lines; $('level').innerText = level; piece = randomPiece(); nextPiece = randomPiece(); drawNext();
+      gameOver = isPaused = isClearing = false; clearAnim = { rows: [], start: 0, duration: 240, phase: 0 }; lastTime = performance.now();
+      
+      ['overlay-start', 'overlay-settings', 'overlay-music', 'overlay-pause', 'overlay-gameover'].forEach(id => $(id).style.display = 'none');
       if (reqAnimId) cancelAnimationFrame(reqAnimId); update();
     }
 
-    function returnToMenu() {
-      isPaused = true; if (reqAnimId) cancelAnimationFrame(reqAnimId); getActiveAudio().pause();
-      board = createMatrix(COLS, ROWS); piece = null; draw();
-      ['overlay-pause', 'overlay-gameover', 'overlay-settings'].forEach(id => $(id).style.display = 'none');
-      $('overlay-start').style.display = 'flex';
+    function returnToMenu() { 
+      isPaused = true; if (reqAnimId) cancelAnimationFrame(reqAnimId); 
+      board = createMatrix(COLS, ROWS); piece = null; draw(); 
+      ['overlay-pause', 'overlay-gameover', 'overlay-settings', 'overlay-music'].forEach(id => $(id).style.display = 'none'); 
+      $('overlay-start').style.display = 'flex'; 
     }
-
-    function togglePause() {
-      if (gameOver || $('overlay-start').style.display !== 'none' || $('overlay-settings').style.display !== 'none') return;
-      isPaused = true; getActiveAudio().pause(); $('overlay-pause').style.display = 'flex'; if (reqAnimId) cancelAnimationFrame(reqAnimId);
+    
+    function togglePause() { 
+      if (gameOver || $('overlay-start').style.display !== 'none' || $('overlay-settings').style.display !== 'none') return; 
+      isPaused = true; bgmPlayer.pause(); updatePlayerUI(); $('overlay-pause').style.display = 'flex'; if (reqAnimId) cancelAnimationFrame(reqAnimId); 
     }
 
     const bindBtn = (id, act, cont) => {
       const b = $(id); let t, it;
       const start = e => { if (e) e.preventDefault(); if (!gameOver && !isPaused) { initAudio(); act(); b.classList.add('active'); if (cont) t = setTimeout(() => it = setInterval(act, 80), 200); } };
       const end = e => { if (e) e.preventDefault(); b.classList.remove('active'); clearTimeout(t); clearInterval(it); };
-      ['touchstart', 'mousedown'].forEach(ev => b.addEventListener(ev, start, { passive: false }));
-      ['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach(ev => b.addEventListener(ev, end));
+      ['touchstart', 'mousedown'].forEach(ev => b.addEventListener(ev, start, { passive: false })); ['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach(ev => b.addEventListener(ev, end));
     };
 
-    bindBtn('btn-left', () => playerMove(-1), true); bindBtn('btn-right', () => playerMove(1), true);
-    bindBtn('btn-down', () => playerDrop(true), true); bindBtn('btn-rotate', playerRotate, false); bindBtn('btn-hard', playerHardDrop, false);
-
+    bindBtn('btn-left', () => playerMove(-1), true); bindBtn('btn-right', () => playerMove(1), true); bindBtn('btn-down', () => playerDrop(true), true); bindBtn('btn-rotate', playerRotate, false); bindBtn('btn-hard', playerHardDrop, false);
     const bindClick = (id, fn) => $(id) && ($(id).onclick = fn, $(id).addEventListener('touchstart', e => { e.preventDefault(); fn(); }, { passive: false }));
+    
     bindClick('start-normal-btn', () => startGame('normal')); bindClick('start-easy-btn', () => startGame('easy'));
     bindClick('settings-btn', () => { previousMenu = 'start'; $('overlay-start').style.display = 'none'; $('overlay-settings').style.display = 'flex'; applySettings(); });
     bindClick('pause-settings-btn', () => { previousMenu = 'pause'; $('overlay-pause').style.display = 'none'; $('overlay-settings').style.display = 'flex'; applySettings(); });
     bindClick('menu-btn-settings', () => { $('overlay-settings').style.display = 'none'; previousMenu === 'pause' ? $('overlay-pause').style.display = 'flex' : ($('overlay-start').style.display = 'flex', draw()); });
-    bindClick('resume-btn', () => { initAudio(); isPaused = false; getActiveAudio().play().catch(e=>{}); $('overlay-pause').style.display = 'none'; lastTime = performance.now(); update(); });
+    
+    bindClick('music-menu-btn', () => { initAudio(); $('overlay-start').style.display = 'none'; $('overlay-music').style.display = 'flex'; });
+    bindClick('music-btn-back', () => { $('overlay-music').style.display = 'none'; $('overlay-start').style.display = 'flex'; });
+
+    bindClick('resume-btn', () => { initAudio(); isPaused = false; bgmPlayer.play().then(()=>updatePlayerUI()).catch(()=>{}); $('overlay-pause').style.display = 'none'; lastTime = performance.now(); update(); });
     bindClick('restart-btn', resetGame); bindClick('menu-btn-pause', returnToMenu); bindClick('retry-btn', resetGame); bindClick('menu-btn-gameover', returnToMenu); bindClick('pause-btn', togglePause);
 
-    $('bgm-slider').oninput = e => { bgmVolume = e.target.value / 100; audioPlayers.forEach(p => p.volume = bgmVolume * bgmVolume); $('bgm-val').innerText = `${e.target.value}%`; localStorage.setItem('tetrisBgmVol', bgmVolume); };
+    function syncVol(val) {
+      bgmVolume = val / 100;
+      bgmPlayer.volume = bgmVolume * bgmVolume; 
+      $('bgm-slider').value = val; $('bgm-val').innerText = `${val}%`; 
+      $('music-vol-slider').value = val;
+      localStorage.setItem('tetrisBgmVol', bgmVolume);
+    }
+    $('bgm-slider').oninput = e => syncVol(e.target.value);
+    $('music-vol-slider').oninput = e => syncVol(e.target.value);
+
     $('sfx-slider').oninput = e => { sfxVolume = e.target.value / 100; $('sfx-val').innerText = `${e.target.value}%`; localStorage.setItem('tetrisSfxVol', sfxVolume); if (Date.now() - ($('sfx-slider').lastPlay || 0) > 100) { initAudio(); playPop(); $('sfx-slider').lastPlay = Date.now(); } };
-    $('toggle-grid-row').onclick = () => { gridEnabled = !gridEnabled; localStorage.setItem('tetrisGrid', gridEnabled); applySettings(); };
+    
+    $('toggle-grid-row').onclick = () => { gridEnabled = !gridEnabled; localStorage.setItem('tetrisGrid', gridEnabled); applySettings(); draw(); };
+    $('toggle-theme-row').onclick = () => { currentTheme = currentTheme === 'classic' ? 'neon' : 'classic'; localStorage.setItem('tetrisTheme', currentTheme); applySettings(); draw(); drawNext(); };
 
     document.addEventListener('keydown', e => {
       if ($('overlay-start').style.display !== 'none') return ['Space', 'Enter'].includes(e.code) && (e.preventDefault(), startGame('normal'));
-      if ($('overlay-settings').style.display !== 'none' || gameOver) return;
+      if ($('overlay-settings').style.display !== 'none' || $('overlay-music').style.display !== 'none' || gameOver) return;
       if (isPaused) return ['p', 'P', 'Escape', 'Enter'].includes(e.key) && (e.preventDefault(), $('resume-btn').click());
       if (isClearing) return;
-      initAudio();
-      const k = e.key.toLowerCase(); if (e.code === 'Space' || k === 'p') e.preventDefault();
+      initAudio(); const k = e.key.toLowerCase(); if (e.code === 'Space' || k === 'p') e.preventDefault();
       if (k === 'a' || e.key === 'ArrowLeft') playerMove(-1); else if (k === 'd' || e.key === 'ArrowRight') playerMove(1); else if (k === 'w' || e.key === 'ArrowUp') playerRotate(); else if (k === 's' || e.key === 'ArrowDown') playerDrop(true); else if (e.code === 'Space') playerHardDrop(); else if (k === 'p') togglePause();
     });
 
     $('menu-high-score').innerText = $('ui-high-score').innerText = currentHighScore = parseInt(localStorage.getItem('tetrisHighScore') || '0', 10);
+    initPlaylistDOM();
+    playTrack(currentBgmIndex, false); 
     applySettings(); board = createMatrix(COLS, ROWS); resize(); draw();
   </script>
 </body>
