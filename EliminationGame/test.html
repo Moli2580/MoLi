@@ -14,7 +14,6 @@
       --btn-bg: var(--accent); --btn-border: none; --btn-shadow: 0 4px 6px rgba(0,0,0,0.3);
       --title-shadow: 0 0 10px rgba(233, 69, 96, 0.5); --title-color: var(--accent);
       --hint-bg: rgba(15, 52, 96, 0.35); --hint-border: rgba(15, 52, 96, 0.9);
-      --list-hover: rgba(255,255,255,0.1); --list-active: rgba(233, 69, 96, 0.3); --list-border: rgba(255,255,255,0.1);
     }
     
     /* 霓虹赛博朋克主题变量 */
@@ -26,7 +25,6 @@
       --btn-bg: linear-gradient(135deg, var(--accent), #b22c45); --btn-border: 1px solid rgba(255,255,255,0.3); --btn-shadow: 0 6px 12px rgba(0,0,0,0.4);
       --title-shadow: 0 0 10px var(--neon), 0 0 20px var(--neon); --title-color: #fff;
       --hint-bg: var(--panel); --hint-border: rgba(0,240,255,0.15);
-      --list-hover: rgba(0,240,255,0.15); --list-active: rgba(0,240,255,0.25); --list-border: rgba(0,240,255,0.2);
     }
 
     body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', Tahoma, sans-serif; touch-action: none; overflow: hidden; display: flex; flex-direction: column; height: 100vh; width: 100vw; transition: background 0.3s;}
@@ -59,11 +57,11 @@
     .overlay { position: absolute; inset: 0; background: var(--menu-bg); backdrop-filter: blur(4px); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10; transition: 0.3s; }
     .menu-wrapper { position: relative; width: 280px; height: 380px; background: var(--menu-wrap-bg); backdrop-filter: var(--menu-backdrop); border: var(--menu-wrap-border); border-radius: 16px; box-shadow: var(--menu-wrap-shadow); transition: 0.3s;}
     #overlay-pause .menu-wrapper { height: 440px; }
-    #overlay-settings .menu-wrapper { height: 490px; }
-    .menu-header { position: absolute; top: 0; left: 0; width: 100%; height: 100px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-    .menu-header h1 { color: var(--title-color); margin: 0; font-size: 32px; text-shadow: var(--title-shadow); text-align: center; }
-    .menu-high-score-text { color: #ccc; font-size: 16px; margin: 10px 0 0 0; font-weight: bold; }
-    .menu-high-score-text span { color: var(--accent); font-size: 20px; text-shadow: 0 0 8px rgba(233, 69, 96, 0.8); }
+    #overlay-settings .menu-wrapper { height: 490px; } /* 设置面板加高以容纳新选项 */
+    .menu-header { position: absolute; top: 0; left: 0; width: 100%; height: 120px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    .menu-header h1 { color: var(--title-color); margin: 0; font-size: 36px; text-shadow: var(--title-shadow); text-align: center; }
+    .menu-high-score-text { color: #ccc; font-size: 18px; margin: 15px 0 0 0; font-weight: bold; }
+    .menu-high-score-text span { color: var(--accent); font-size: 22px; text-shadow: 0 0 8px rgba(233, 69, 96, 0.8); }
     
     .menu-buttons { position: absolute; bottom: 0; left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 16px; padding-bottom: 25px; }
     .overlay button { padding: 15px 20px; font-size: 18px; background: var(--btn-bg); color: white; border: var(--btn-border); border-radius: 8px; font-weight: bold; margin: 0; width: 180px; box-sizing: border-box; cursor: pointer; box-shadow: var(--btn-shadow); transition: transform 0.1s, filter 0.2s; }
@@ -75,14 +73,12 @@
     .setting-item { width: 220px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 15px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
     body[data-theme="classic"] .setting-item { background: var(--panel2); box-shadow: 0 4px 6px rgba(0,0,0,0.4); border: none; }
     .setting-header { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: bold; color: #ddd; }
-    
-    input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; margin: 5px 0;}
-    input[type=range]:focus { outline: none; }
-    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: #0b0e17; border-radius: 3px; border: 1px solid rgba(255,255,255,0.1); }
-    body[data-theme="classic"] input[type=range]::-webkit-slider-runnable-track { background: var(--grid); border: none; }
-    input[type=range]::-webkit-slider-thumb { height: 18px; width: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; -webkit-appearance: none; margin-top: -7px; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-    body[data-theme="neon"] input[type=range]::-webkit-slider-thumb { background: var(--neon); box-shadow: 0 0 10px var(--neon); }
-    
+    .setting-item input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+    .setting-item input[type=range]:focus { outline: none; }
+    .setting-item input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: #0b0e17; border-radius: 3px; border: 1px solid rgba(255,255,255,0.1); }
+    body[data-theme="classic"] .setting-item input[type=range]::-webkit-slider-runnable-track { background: var(--grid); border: none; }
+    .setting-item input[type=range]::-webkit-slider-thumb { height: 18px; width: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; -webkit-appearance: none; margin-top: -7px; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+    body[data-theme="neon"] .setting-item input[type=range]::-webkit-slider-thumb { background: var(--neon); box-shadow: 0 0 10px var(--neon); }
     .toggle-row { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: bold; color: #ddd; }
     .toggle-row span.status { color: #fff; background: var(--accent); padding: 2px 10px; border-radius: 4px; cursor: pointer; user-select: none; box-shadow: 0 0 8px rgba(233, 69, 96, 0.6); transition: 0.3s; }
     body[data-theme="classic"] .toggle-row span.status { background: rgba(0,0,0,0.3); color: var(--accent); box-shadow: none; }
@@ -105,40 +101,6 @@
     .keycap{ display: inline-flex; align-items: center; justify-content: center; min-width: 44px; padding: 4px 8px; border-radius: 6px; background: linear-gradient(180deg, #2a3550, #16213e); border: 1px solid #4a5b82; border-bottom: 3px solid #0f1626; box-shadow: 0 4px 6px rgba(0,0,0,0.4); font-weight: 800; letter-spacing: 0.5px; color: #fff; }
     body[data-theme="classic"] .keycap { background: rgba(22,33,62,0.9); border: 1px solid rgba(255,255,255,0.12); border-bottom: none; box-shadow: 0 3px 6px rgba(0,0,0,0.25); }
     .keycap.space{ min-width: 78px; }
-
-    /* --- 音乐播放器专属样式 --- */
-    
-    /* 入口按钮：严格正圆，尺寸缩小到40px */
-    .icon-btn-corner { position: absolute; bottom: 20px; left: 20px; background: var(--panel2); border: 1px solid var(--list-border); border-radius: 50%; width: 40px; height: 40px; font-size: 18px; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: 0.2s; z-index: 20;}
-    body[data-theme="neon"] .icon-btn-corner { background: rgba(10, 20, 35, 0.8); backdrop-filter: blur(5px); box-shadow: 0 0 15px rgba(0,240,255,0.2); }
-    .icon-btn-corner:hover { transform: scale(1.1); }
-    .icon-btn-corner:active { transform: scale(0.95); }
-
-    /* 播放界面：扩大面板尺寸 */
-    #overlay-music .menu-wrapper { height: 580px; width: 340px; }
-    .music-content { position: absolute; top: 80px; left: 0; width: 100%; padding: 0 25px; box-sizing: border-box; display: flex; flex-direction: column; gap: 15px; }
-    .now-playing { font-size: 18px; font-weight: bold; color: var(--info-color); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: var(--info-shadow); background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border: 1px solid var(--list-border); }
-    
-    .music-controls { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
-    /* 控制按钮缩小 */
-    .ctrl-btn { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; transition: 0.2s; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-    .ctrl-btn:hover { transform: scale(1.1); color: var(--info-color); }
-    .ctrl-btn:active { transform: scale(0.9); }
-    .play-pause { font-size: 26px; color: var(--accent); }
-    body[data-theme="neon"] .play-pause { color: var(--neon); text-shadow: 0 0 10px var(--neon); }
-
-    .vol-row { display: flex; align-items: center; gap: 10px; font-size: 16px; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 20px; }
-    
-    /* 歌曲列表展示高度拉长 */
-    .playlist { flex: 1; height: 230px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid var(--list-border); border-radius: 8px; padding: 5px; }
-    .playlist::-webkit-scrollbar { width: 6px; }
-    .playlist::-webkit-scrollbar-track { background: transparent; }
-    .playlist::-webkit-scrollbar-thumb { background: var(--grid); border-radius: 3px; }
-    body[data-theme="neon"] .playlist::-webkit-scrollbar-thumb { background: rgba(0,240,255,0.3); }
-    
-    .playlist-item { padding: 10px; font-size: 14px; color: #ccc; cursor: pointer; border-radius: 6px; transition: 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
-    .playlist-item:hover { background: var(--list-hover); color: #fff; }
-    .playlist-item.active { background: var(--list-active); color: #fff; font-weight: bold; border-left: 4px solid var(--info-color); }
     
     @media (hover: hover) and (pointer: fine) and (min-width: 900px) {
       #controls{ display: none; } #pc-hints{ display: block; } #game-area{ gap: 22px; padding: 22px; }
@@ -168,7 +130,6 @@
     </div>
     
     <div id="overlay-start" class="overlay">
-      <button id="music-menu-btn" class="icon-btn-corner" title="音乐播放器">🎵</button>
       <div class="menu-wrapper">
         <div class="menu-header"><h1>俄罗斯方块</h1><p class="menu-high-score-text">最高纪录: <span id="menu-high-score">0</span></p></div>
         <div class="menu-buttons">
@@ -178,33 +139,6 @@
         </div>
       </div>
     </div>
-    
-    <!-- 音乐播放器界面 -->
-    <div id="overlay-music" class="overlay" style="display: none;">
-      <div class="menu-wrapper">
-        <div class="menu-header"><h1>音乐电台</h1></div>
-        <div class="music-content">
-          <div class="now-playing" id="music-title">准备播放...</div>
-          <div class="music-controls">
-            <button id="music-mode-btn" class="ctrl-btn" title="播放模式">🔁</button>
-            <button id="music-prev-btn" class="ctrl-btn" title="上一首">⏮</button>
-            <button id="music-play-btn" class="ctrl-btn play-pause" title="播放/暂停">▶️</button>
-            <button id="music-next-btn" class="ctrl-btn" title="下一首">⏭</button>
-          </div>
-          <div class="vol-row">
-            <span>🔉</span>
-            <input type="range" id="music-vol-slider" min="0" max="100" value="100">
-          </div>
-          <div class="playlist" id="playlist-container">
-            <!-- 列表动态生成 -->
-          </div>
-        </div>
-        <div class="menu-buttons" style="padding-bottom: 15px;">
-          <button id="music-btn-back">返 回</button> 
-        </div>
-      </div>
-    </div>
-
     <div id="overlay-settings" class="overlay" style="display: none;">
       <div class="menu-wrapper">
         <div class="menu-header"><h1>设置</h1></div>
@@ -220,6 +154,7 @@
           <div class="setting-item">
             <div class="toggle-row" id="toggle-grid-row"><span>显示网格</span><span class="status" id="grid-status">开</span></div>
           </div>
+          <!-- 新增的主题切换项 -->
           <div class="setting-item">
             <div class="toggle-row" id="toggle-theme-row"><span>主题风格</span><span class="status" id="theme-status">经典</span></div>
           </div>
@@ -227,7 +162,6 @@
         </div>
       </div>
     </div>
-    
     <div id="overlay-pause" class="overlay" style="display: none;">
       <div class="menu-wrapper">
         <div class="menu-header"><h1>游戏已暂停</h1></div>
@@ -266,9 +200,9 @@
     const COLS = 10, ROWS = 20;
     let BLOCK_SIZE = 20;
 
+    // 两种主题的色板
     const COLORS_CLASSIC = [null, '#00E5FF', '#2962FF', '#FF6D00', '#FFD600', '#00E676', '#D500F9', '#FF1744'];
-    const COLORS_NEON = [null, '#00FFFF', '#0055FF', '#FF8800', '#FFFF00', '#00FF00', '#FF00FF', '#FF0055'];
-    
+    const COLORS_NEON = [null, '#00F0FF', '#0033FF', '#FF8C00', '#FFE600', '#00FF66', '#E000FF', '#FF003C'];
     const SHAPES = [ [], [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], [[2,0,0],[2,2,2],[0,0,0]], [[0,0,3],[3,3,3],[0,0,0]], [[4,4],[4,4]], [[0,5,5],[5,5,0],[0,0,0]], [[0,6,0],[6,6,6],[0,0,0]], [[7,7,0],[0,7,7],[0,0,0]] ];
 
     let board = [], piece = null, nextPiece = null, bag = [];
@@ -277,6 +211,7 @@
     let gameOver = false, isPaused = false, gameMode = 'normal', previousMenu = 'start';
     let isClearing = false, clearAnim = { rows: [], start: 0, duration: 240, phase: 0 };
     
+    // 主题与设置状态
     let currentTheme = localStorage.getItem('tetrisTheme') || 'classic';
     let bgmVolume = parseFloat(localStorage.getItem('tetrisBgmVol')) ?? 1.0;
     let sfxVolume = parseFloat(localStorage.getItem('tetrisSfxVol')) ?? 1.0;
@@ -285,77 +220,12 @@
     let gridEnabled = localStorage.getItem('tetrisGrid') !== 'false';
     const IS_PC = matchMedia('(hover: hover) and (pointer: fine)').matches;
 
-    // === 音频系统 ===
     const bgmPlaylist = ["Ripples in the Matrix.mp3", "Soothing Cubes.mp3", "Dream of Blocks.mp3", "Critical Mass.mp3", "Rhythm of Lines.mp3", "Land of Illusions.mp3"];
-    let currentBgmIndex = Math.floor(Math.random() * bgmPlaylist.length);
-    const bgmPlayer = new Audio();
-    bgmPlayer.preload = 'auto';
-    
-    let playMode = parseInt(localStorage.getItem('tetrisPlayMode') || '0', 10); 
-    const modeIcons = ['🔁', '🔂', '🔀'];
-    
-    function initPlaylistDOM() {
-      const container = $('playlist-container');
-      container.innerHTML = '';
-      bgmPlaylist.forEach((filename, idx) => {
-        const div = document.createElement('div');
-        div.className = 'playlist-item';
-        div.innerText = `${idx + 1}. ${filename.replace('.mp3', '')}`;
-        div.onclick = () => playTrack(idx);
-        container.appendChild(div);
-      });
-      updatePlayerUI();
-    }
-
-    function playTrack(idx, forcePlay = true) {
-      currentBgmIndex = idx;
-      bgmPlayer.src = bgmPlaylist[idx];
-      bgmPlayer.volume = bgmVolume * bgmVolume;
-      updatePlayerUI();
-      if (forcePlay) {
-        bgmPlayer.play().then(() => updatePlayerUI()).catch(e => console.log("等待交互: ", e));
-      }
-    }
-
-    function toggleMusic() {
-      if (bgmPlayer.paused) bgmPlayer.play().then(() => updatePlayerUI());
-      else { bgmPlayer.pause(); updatePlayerUI(); }
-    }
-
-    function nextTrack() {
-      let nextIdx;
-      if (playMode === 2) nextIdx = Math.floor(Math.random() * bgmPlaylist.length);
-      else nextIdx = (currentBgmIndex + 1) % bgmPlaylist.length;
-      playTrack(nextIdx);
-    }
-
-    function prevTrack() {
-      let prevIdx = currentBgmIndex - 1;
-      if (prevIdx < 0) prevIdx = bgmPlaylist.length - 1;
-      playTrack(prevIdx);
-    }
-
-    bgmPlayer.addEventListener('ended', () => {
-      if (playMode === 1) playTrack(currentBgmIndex); 
-      else nextTrack(); 
-    });
-
-    function updatePlayerUI() {
-      $('music-title').innerText = bgmPlaylist[currentBgmIndex].replace('.mp3', '');
-      $('music-play-btn').innerText = bgmPlayer.paused ? '▶️' : '⏸';
-      $('music-mode-btn').innerText = modeIcons[playMode];
-      
-      const items = document.querySelectorAll('.playlist-item');
-      items.forEach((el, i) => {
-        if (i === currentBgmIndex) el.classList.add('active');
-        else el.classList.remove('active');
-      });
-    }
-
-    $('music-mode-btn').onclick = () => { playMode = (playMode + 1) % 3; localStorage.setItem('tetrisPlayMode', playMode); updatePlayerUI(); };
-    $('music-play-btn').onclick = toggleMusic;
-    $('music-prev-btn').onclick = prevTrack;
-    $('music-next-btn').onclick = nextTrack;
+    let currentBgmIndex = 0, activePlayerIndex = 0;
+    const audioPlayers = [new Audio(), new Audio()];
+    audioPlayers.forEach(p => { p.preload = 'auto'; p.addEventListener('ended', () => { activePlayerIndex = 1 - activePlayerIndex; let n = audioPlayers[activePlayerIndex]; currentBgmIndex = (currentBgmIndex + 1) % bgmPlaylist.length; n.currentTime = 0; n.play().catch(()=>{}); audioPlayers[1 - activePlayerIndex].src = bgmPlaylist[(currentBgmIndex + 1) % bgmPlaylist.length]; audioPlayers[1 - activePlayerIndex].load(); }); });
+    const getActiveAudio = () => audioPlayers[activePlayerIndex];
+    function startRandomBgm() { audioPlayers.forEach(p => p.pause()); currentBgmIndex = Math.floor(Math.random() * bgmPlaylist.length); activePlayerIndex = 0; audioPlayers[0].src = bgmPlaylist[currentBgmIndex]; audioPlayers[0].currentTime = 0; audioPlayers[0].play().catch(()=>{}); audioPlayers[1].src = bgmPlaylist[(currentBgmIndex + 1) % bgmPlaylist.length]; audioPlayers[1].load(); }
 
     function initBag() { bag = [1, 2, 3, 4, 5, 6, 7]; for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; } }
     function randomPiece() { if (!bag.length) initBag(); const m = SHAPES[bag.pop()]; return { matrix: m, pos: { x: Math.floor(COLS / 2) - Math.floor(m.length / 2), y: 0 } }; }
@@ -369,12 +239,8 @@
     function applySettings() { 
       document.body.setAttribute('data-theme', currentTheme);
       $('theme-status').innerText = currentTheme === 'neon' ? '霓虹' : '经典';
-      
-      const volMap = Math.round(bgmVolume * 100);
-      bgmPlayer.volume = bgmVolume * bgmVolume; 
-      $('bgm-slider').value = volMap; $('bgm-val').innerText = volMap + '%'; 
-      $('music-vol-slider').value = volMap;
-      
+      audioPlayers.forEach(p => p.volume = bgmVolume * bgmVolume); 
+      $('bgm-slider').value = Math.round(bgmVolume * 100); $('bgm-val').innerText = Math.round(bgmVolume * 100) + '%'; 
       $('sfx-slider').value = Math.round(sfxVolume * 100); $('sfx-val').innerText = Math.round(sfxVolume * 100) + '%'; 
       $('toggle-grid-row').className = gridEnabled ? 'toggle-row' : 'toggle-row off'; $('grid-status').innerText = gridEnabled ? '开' : '关'; 
     }
@@ -409,7 +275,7 @@
       dropInterval = Math.max(100, 1000 - (level - 1) * 100);
     }
 
-    function triggerGameOver() { gameOver = true; bgmPlayer.pause(); updatePlayerUI(); $('final-score-val').innerText = score; let sh = parseInt(localStorage.getItem('tetrisHighScore') || '0', 10); $('new-record-badge').style.display = (score > sh && score > 0) ? (localStorage.setItem('tetrisHighScore', score), 'inline-block') : 'none'; $('overlay-gameover').style.display = 'flex'; }
+    function triggerGameOver() { gameOver = true; getActiveAudio().pause(); $('final-score-val').innerText = score; let sh = parseInt(localStorage.getItem('tetrisHighScore') || '0', 10); $('new-record-badge').style.display = (score > sh && score > 0) ? (localStorage.setItem('tetrisHighScore', score), 'inline-block') : 'none'; $('overlay-gameover').style.display = 'flex'; }
 
     function lockPiece() {
       merge(); const rows = findFullRows();
@@ -430,13 +296,13 @@
       const poly = (f, pts) => { c.fillStyle = f; c.beginPath(); c.moveTo(...pts[0]); pts.slice(1).forEach(pt => c.lineTo(...pt)); c.fill(); };
       
       if (currentTheme === 'neon') {
-        poly('rgba(255,255,255,0.6)', [[px,py], [px+a,py], [px+a-e,py+e], [px+e,py+e]]);
-        poly('rgba(255,255,255,0.3)', [[px,py], [px+e,py+e], [px+e,py+a-e], [px,py+a]]);
-        poly('rgba(0,0,0,0.4)', [[px+a,py], [px+a,py+a], [px+a-e,py+a-e], [px+a-e,py+e]]);
-        poly('rgba(0,0,0,0.6)', [[px,py+a], [px+a,py+a], [px+a-e,py+a-e], [px+e,py+a-e]]);
-        c.fillStyle = 'rgba(255,255,255,0.4)'; c.fillRect(px+e, py+e, a-e*2, (a-e*2)*0.25);
-        c.fillStyle = 'rgba(0,0,0,0.2)'; c.fillRect(px+e, py+a-e-(a-e*2)*0.25, a-e*2, (a-e*2)*0.25);
-        c.strokeStyle = 'rgba(0,0,0,0.8)'; c.lineWidth = 1; c.strokeRect(px, py, a, a);
+        poly('rgba(255,255,255,0.5)', [[px,py], [px+a,py], [px+a-e,py+e], [px+e,py+e]]);
+        poly('rgba(255,255,255,0.2)', [[px,py], [px+e,py+e], [px+e,py+a-e], [px,py+a]]);
+        poly('rgba(0,0,0,0.3)', [[px+a,py], [px+a,py+a], [px+a-e,py+a-e], [px+a-e,py+e]]);
+        poly('rgba(0,0,0,0.5)', [[px,py+a], [px+a,py+a], [px+a-e,py+a-e], [px+e,py+a-e]]);
+        c.fillStyle = 'rgba(255,255,255,0.3)'; c.fillRect(px+e, py+e, a-e*2, (a-e*2)*0.25);
+        c.fillStyle = 'rgba(0,0,0,0.15)'; c.fillRect(px+e, py+a-e-(a-e*2)*0.25, a-e*2, (a-e*2)*0.25);
+        c.strokeStyle = 'rgba(0,0,0,0.7)'; c.lineWidth = 1; c.strokeRect(px, py, a, a);
       } else {
         poly('rgba(255,255,255,0.4)', [[px,py], [px+a,py], [px+a-e,py+e], [px+e,py+e]]);
         poly('rgba(255,255,255,0.2)', [[px,py], [px+e,py+e], [px+e,py+a-e], [px,py+a]]);
@@ -503,7 +369,7 @@
     }
 
     function update(time = 0) {
-      if (gameOver || isPaused || $('overlay-start').style.display !== 'none' || $('overlay-settings').style.display !== 'none' || $('overlay-music').style.display !== 'none') return;
+      if (gameOver || isPaused || $('overlay-start').style.display !== 'none' || $('overlay-settings').style.display !== 'none') return;
       dropCounter += time - lastTime; lastTime = time;
       if (isClearing) {
         if ((clearAnim.phase = Math.min(1, (time - clearAnim.start) / clearAnim.duration)) >= 1) {
@@ -518,29 +384,15 @@
     function startGame(m) { gameMode = m; resetGame(); }
     function resetGame() {
       initAudio(); $('menu-high-score').innerText = $('ui-high-score').innerText = currentHighScore = parseInt(localStorage.getItem('tetrisHighScore') || '0', 10);
-      
-      if (!bgmPlayer.src) playTrack(Math.floor(Math.random() * bgmPlaylist.length), true);
-      else if (bgmPlayer.paused) bgmPlayer.play().then(()=>updatePlayerUI()).catch(()=>{});
-      
-      board = createMatrix(COLS, ROWS); score = lines = dropCounter = 0; level = 1; dropInterval = 1000; bag = [];
+      startRandomBgm(); board = createMatrix(COLS, ROWS); score = lines = dropCounter = 0; level = 1; dropInterval = 1000; bag = [];
       $('score').innerText = score; $('lines').innerText = lines; $('level').innerText = level; piece = randomPiece(); nextPiece = randomPiece(); drawNext();
       gameOver = isPaused = isClearing = false; clearAnim = { rows: [], start: 0, duration: 240, phase: 0 }; lastTime = performance.now();
-      
-      ['overlay-start', 'overlay-settings', 'overlay-music', 'overlay-pause', 'overlay-gameover'].forEach(id => $(id).style.display = 'none');
+      ['overlay-start', 'overlay-settings', 'overlay-pause', 'overlay-gameover'].forEach(id => $(id).style.display = 'none');
       if (reqAnimId) cancelAnimationFrame(reqAnimId); update();
     }
 
-    function returnToMenu() { 
-      isPaused = true; if (reqAnimId) cancelAnimationFrame(reqAnimId); 
-      board = createMatrix(COLS, ROWS); piece = null; draw(); 
-      ['overlay-pause', 'overlay-gameover', 'overlay-settings', 'overlay-music'].forEach(id => $(id).style.display = 'none'); 
-      $('overlay-start').style.display = 'flex'; 
-    }
-    
-    function togglePause() { 
-      if (gameOver || $('overlay-start').style.display !== 'none' || $('overlay-settings').style.display !== 'none') return; 
-      isPaused = true; bgmPlayer.pause(); updatePlayerUI(); $('overlay-pause').style.display = 'flex'; if (reqAnimId) cancelAnimationFrame(reqAnimId); 
-    }
+    function returnToMenu() { isPaused = true; if (reqAnimId) cancelAnimationFrame(reqAnimId); getActiveAudio().pause(); board = createMatrix(COLS, ROWS); piece = null; draw(); ['overlay-pause', 'overlay-gameover', 'overlay-settings'].forEach(id => $(id).style.display = 'none'); $('overlay-start').style.display = 'flex'; }
+    function togglePause() { if (gameOver || $('overlay-start').style.display !== 'none' || $('overlay-settings').style.display !== 'none') return; isPaused = true; getActiveAudio().pause(); $('overlay-pause').style.display = 'flex'; if (reqAnimId) cancelAnimationFrame(reqAnimId); }
 
     const bindBtn = (id, act, cont) => {
       const b = $(id); let t, it;
@@ -556,23 +408,10 @@
     bindClick('settings-btn', () => { previousMenu = 'start'; $('overlay-start').style.display = 'none'; $('overlay-settings').style.display = 'flex'; applySettings(); });
     bindClick('pause-settings-btn', () => { previousMenu = 'pause'; $('overlay-pause').style.display = 'none'; $('overlay-settings').style.display = 'flex'; applySettings(); });
     bindClick('menu-btn-settings', () => { $('overlay-settings').style.display = 'none'; previousMenu === 'pause' ? $('overlay-pause').style.display = 'flex' : ($('overlay-start').style.display = 'flex', draw()); });
-    
-    bindClick('music-menu-btn', () => { initAudio(); $('overlay-start').style.display = 'none'; $('overlay-music').style.display = 'flex'; });
-    bindClick('music-btn-back', () => { $('overlay-music').style.display = 'none'; $('overlay-start').style.display = 'flex'; });
-
-    bindClick('resume-btn', () => { initAudio(); isPaused = false; bgmPlayer.play().then(()=>updatePlayerUI()).catch(()=>{}); $('overlay-pause').style.display = 'none'; lastTime = performance.now(); update(); });
+    bindClick('resume-btn', () => { initAudio(); isPaused = false; getActiveAudio().play().catch(()=>{}); $('overlay-pause').style.display = 'none'; lastTime = performance.now(); update(); });
     bindClick('restart-btn', resetGame); bindClick('menu-btn-pause', returnToMenu); bindClick('retry-btn', resetGame); bindClick('menu-btn-gameover', returnToMenu); bindClick('pause-btn', togglePause);
 
-    function syncVol(val) {
-      bgmVolume = val / 100;
-      bgmPlayer.volume = bgmVolume * bgmVolume; 
-      $('bgm-slider').value = val; $('bgm-val').innerText = `${val}%`; 
-      $('music-vol-slider').value = val;
-      localStorage.setItem('tetrisBgmVol', bgmVolume);
-    }
-    $('bgm-slider').oninput = e => syncVol(e.target.value);
-    $('music-vol-slider').oninput = e => syncVol(e.target.value);
-
+    $('bgm-slider').oninput = e => { bgmVolume = e.target.value / 100; audioPlayers.forEach(p => p.volume = bgmVolume * bgmVolume); $('bgm-val').innerText = `${e.target.value}%`; localStorage.setItem('tetrisBgmVol', bgmVolume); };
     $('sfx-slider').oninput = e => { sfxVolume = e.target.value / 100; $('sfx-val').innerText = `${e.target.value}%`; localStorage.setItem('tetrisSfxVol', sfxVolume); if (Date.now() - ($('sfx-slider').lastPlay || 0) > 100) { initAudio(); playPop(); $('sfx-slider').lastPlay = Date.now(); } };
     
     $('toggle-grid-row').onclick = () => { gridEnabled = !gridEnabled; localStorage.setItem('tetrisGrid', gridEnabled); applySettings(); draw(); };
@@ -580,7 +419,7 @@
 
     document.addEventListener('keydown', e => {
       if ($('overlay-start').style.display !== 'none') return ['Space', 'Enter'].includes(e.code) && (e.preventDefault(), startGame('normal'));
-      if ($('overlay-settings').style.display !== 'none' || $('overlay-music').style.display !== 'none' || gameOver) return;
+      if ($('overlay-settings').style.display !== 'none' || gameOver) return;
       if (isPaused) return ['p', 'P', 'Escape', 'Enter'].includes(e.key) && (e.preventDefault(), $('resume-btn').click());
       if (isClearing) return;
       initAudio(); const k = e.key.toLowerCase(); if (e.code === 'Space' || k === 'p') e.preventDefault();
@@ -588,8 +427,6 @@
     });
 
     $('menu-high-score').innerText = $('ui-high-score').innerText = currentHighScore = parseInt(localStorage.getItem('tetrisHighScore') || '0', 10);
-    initPlaylistDOM();
-    playTrack(currentBgmIndex, false); 
     applySettings(); board = createMatrix(COLS, ROWS); resize(); draw();
   </script>
 </body>
