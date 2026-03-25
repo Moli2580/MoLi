@@ -291,24 +291,40 @@
     const getColors = () => currentTheme === 'neon' ? COLORS_NEON : COLORS_CLASSIC;
 
     function draw3DBlock(c, x, y, s, color, alpha = 1, scale = 1) {
-      const p = 1, a = (s - p * 2) * scale, px = x + p + (s - p * 2 - a) / 2, py = y + p + (s - p * 2 - a) / 2, e = Math.max(2, a * 0.15);
-      c.save(); 
-      c.globalAlpha = alpha; 
+    const p = 1, a = (s - p * 2) * scale, px = x + p + (s - p * 2 - a) / 2, py = y + p + (s - p * 2 - a) / 2, e = Math.max(2, a * 0.15);
+    c.save(); 
+    c.globalAlpha = alpha; 
       
       if (currentTheme === 'neon') {
-        // 霓虹主题：只画发光边框，不填充内���
+        // 圆角矩形辅助函数（兼容性好）
+        const drawRoundedRect = (ctx, rx, ry, rw, rh, r) => {
+          ctx.beginPath();
+          ctx.moveTo(rx + r, ry);
+          ctx.arcTo(rx + rw, ry, rx + rw, ry + rh, r);
+          ctx.arcTo(rx + rw, ry + rh, rx, ry + rh, r);
+          ctx.arcTo(rx, ry + rh, rx, ry, r);
+          ctx.arcTo(rx, ry, rx + rw, ry, r);
+          ctx.closePath();
+          ctx.stroke();
+        };
+
+        const radius = Math.max(3, a * 0.18); // 根据方块大小计算圆润度，最小3像素
+        
         c.strokeStyle = color;
         c.lineWidth = Math.max(2, a * 0.1); // 根据方块大小自适应线宽
         c.shadowColor = color;
         c.shadowBlur = 10; // 外发光效果
-        // 绘制主颜色边框
-        c.strokeRect(px + 1, py + 1, a - 2, a - 2);
         
-        // 绘制内部白色高光描边，增强霓虹灯管的视觉效果
+        // 绘制主颜色圆角边框
+        drawRoundedRect(c, px + 1, py + 1, a - 2, a - 2, radius);
+        
+        // 绘制内部白色高光圆角描边，让发光管看起来更立体
         c.shadowBlur = 0;
         c.strokeStyle = 'rgba(255, 255, 255, 0.7)';
         c.lineWidth = 1;
-        c.strokeRect(px + 2, py + 2, a - 4, a - 4);
+        // 内部线条的圆角半径稍微缩小一点点，视觉上更自然
+        drawRoundedRect(c, px + 2, py + 2, a - 4, a - 4, Math.max(1, radius - 1));
+        
       } else {
         // 经典主题：保持原有的3D质感和填充
         c.fillStyle = color; 
@@ -322,8 +338,8 @@
         c.strokeStyle = 'rgba(0,0,0,0.55)'; c.lineWidth = 1; c.strokeRect(px, py, a, a);
       }
       c.restore();
-    }
-
+        }
+    
     const drawMatrix = (m, off, c = ctx, s = BLOCK_SIZE) => m.forEach((r, y) => r.forEach((v, x) => v && draw3DBlock(c, (x + off.x) * s, (y + off.y) * s, s, getColors()[v])));
 
     function drawGrid() {
