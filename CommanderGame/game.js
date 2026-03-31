@@ -20,7 +20,7 @@ export function initPhaserGame() {
         },
         scene: [
             BootScene,
-            // BattleScene // 等待下一部分实现
+            BattleScene
         ]
     };
 
