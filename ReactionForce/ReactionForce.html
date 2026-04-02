@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>精准点击挑战</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #1a1a2e;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 10;
+        }
+        .hud {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            font-size: 1.2rem;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+            background: linear-gradient(to bottom, rgba(26, 26, 46, 0.9), rgba(26, 26, 46, 0));
+        }
+        .stats {
+            text-align: right;
+        }
+        .controls {
+            pointer-events: auto;
+        }
+        .menu-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(22, 33, 62, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            pointer-events: auto;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            border: 2px solid #0f3460;
+            transition: opacity 0.3s;
+            z-index: 20;
+            min-width: 250px;
+        }
+        h1, h2 {
+            margin-top: 0;
+            color: #e94560;
+        }
+        .btn {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.2s, transform 0.1s;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .btn:hover {
+            background: #ff5c77;
+            transform: scale(1.05);
+        }
+        .btn:active {
+            transform: scale(0.95);
+        }
+        .btn-small {
+            padding: 6px 20px;
+            font-size: 1rem;
+            margin-top: 0;
+            width: auto;
+        }
+        .slider-container {
+            margin: 20px 0;
+            text-align: left;
+        }
+        input[type=range] {
+            width: 100%;
+            accent-color: #e94560;
+        }
+        .hidden {
+            opacity: 0;
+            pointer-events: none !important;
+            display: none !important; /* 彻底隐藏防止阻挡点击 */
+        }
+        #game-over {
+            color: #fff;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div class="hud" id="hud-area">
+            <div>
+                <div>时间: <span id="time-display" style="color:#e94560; font-weight:bold;">60</span>s</div>
+                <div>得分: <span id="score-display">0</span></div>
+            </div>
+            <div class="controls hidden" id="ingame-controls">
+                <button class="btn btn-small" id="pause-btn">暂停</button>
+            </div>
+            <div class="stats">
+                <div>最高分: <span id="highscore-display">0</span></div>
+                <div>命中率: <span id="accuracy-display">100</span>%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主菜单 -->
+    <div id="menu" class="menu-box">
+        <h1>精准点击挑战</h1>
+        <div id="game-over" class="hidden">
+            <h2>游戏结束!</h2>
+            <p>最终得分: <span id="final-score">0</span></p>
+            <p>命中率: <span id="final-accuracy">0</span>%</p>
+        </div>
+        
+        <div class="slider-container">
+            <label for="difficulty">初始难度: <span id="diff-val">普通</span></label>
+            <input type="range" id="difficulty" min="1" max="3" value="2" step="1">
+            <small style="display:block; color:#aaa; margin-top:5px;">难度越高，目标消失越快</small>
+        </div>
+        
+        <button class="btn" id="start-btn">开始挑战 (60秒)</button>
+    </div>
+
+    <!-- 暂停菜单 -->
+    <div id="pause-menu" class="menu-box hidden">
+        <h2>已暂停</h2>
+        <button class="btn" id="resume-btn">继续游戏</button>
+        <button class="btn" id="restart-btn">重新开始</button>
+        <button class="btn" id="sound-btn">音效: 开</button>
+        <button class="btn" id="main-menu-btn">返回主菜单</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // UI Elements
+    const timeDisplay = document.getElementById('time-display');
+    const scoreDisplay = document.getElementById('score-display');
+    const highScoreDisplay = document.getElementById('highscore-display');
+    const accuracyDisplay = document.getElementById('accuracy-display');
+    
+    const menu = document.getElementById('menu');
+    const pauseMenu = document.getElementById('pause-menu');
+    const ingameControls = document.getElementById('ingame-controls');
+    
+    const startBtn = document.getElementById('start-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const resumeBtn = document.getElementById('resume-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const soundBtn = document.getElementById('sound-btn');
+    const mainMenuBtn = document.getElementById('main-menu-btn');
+    
+    const difficultySlider = document.getElementById('difficulty');
+    const diffValDisplay = document.getElementById('diff-val');
+    const gameOverScreen = document.getElementById('game-over');
+    const finalScoreDisplay = document.getElementById('final-score');
+    const finalAccuracyDisplay = document.getElementById('final-accuracy');
+
+    // Game State
+    let width, height;
+    let targets = [];
+    let ripples = [];
+    let isPlaying = false;
+    let isPaused = false;
+    let score = 0;
+    let timeLeft = 60;
+    let totalClicks = 0;
+    let hits = 0;
+    let highScore = localStorage.getItem('precisionHighScore') || 0;
+    let isSoundEnabled = true;
+    
+    // Timing and Difficulty
+    let lastTime = 0;
+    let spawnTimer = 0;
+    let gameTimer = 0;
+    let animationFrameId;
+    
+    let baseSpawnInterval = 600; 
+    let currentSpawnInterval = 600;
+    let baseShrinkSpeed = 30; 
+    let currentShrinkSpeed = 30;
+
+    // 顶部UI保护区域高度（防止目标刷在分数下方）
+    const uiSafeMarginTop = 90; 
+
+    highScoreDisplay.innerText = highScore;
+
+    // --- 音效系统 ---
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx && isSoundEnabled) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                audioCtx = new AudioContext();
+            }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function playSound(type) {
+        if (!isSoundEnabled || !audioCtx) return;
+        
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        if (type === 'hit') {
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+            
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.1);
+        } else if (type === 'miss') {
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.2);
+            
+            gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.2);
+        }
+    }
+
+    // Resize Canvas
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Classes
+    class Target {
+        constructor(x, y, maxRadius, shrinkSpeed) {
+            this.x = x;
+            this.y = y;
+            this.maxRadius = maxRadius;
+            this.radius = maxRadius;
+            this.shrinkSpeed = shrinkSpeed;
+            const hue = Math.floor(Math.random() * 360);
+            this.color = `hsl(${hue}, 80%, 60%)`;
+            this.isDead = false;
+        }
+
+        update(dt) {
+            this.radius -= this.shrinkSpeed * (dt / 1000);
+            if (this.radius <= 0) {
+                this.isDead = true;
+                score = Math.max(0, score - 5);
+                updateHUD();
+            }
+        }
+
+        draw(ctx) {
+            if (this.radius <= 0) return;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius * 0.6, 0, Math.PI * 2);
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fill();
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius * 0.2, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+            ctx.closePath();
+        }
+    }
+
+    class Ripple {
+        constructor(x, y, color) {
+            this.x = x;
+            this.y = y;
+            this.radius = 10;
+            this.color = color;
+            this.alpha = 1;
+            this.expandSpeed = 200; 
+            this.fadeSpeed = 3; 
+            this.isDead = false;
+        }
+
+        update(dt) {
+            this.radius += this.expandSpeed * (dt / 1000);
+            this.alpha -= this.fadeSpeed * (dt / 1000);
+            if (this.alpha <= 0) this.isDead = true;
+        }
+
+        draw(ctx) {
+            if (this.alpha <= 0) return;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.strokeStyle = this.color.replace(')', `, ${this.alpha})`).replace('hsl', 'hsla');
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.closePath();
+        }
+    }
+
+    // Input Handling
+    function handleInteraction(e) {
+        if (!isPlaying || isPaused) return;
+        
+        // 确保点击的不是UI元素
+        if(e.target !== canvas) return;
+        
+        e.preventDefault();
+        initAudio();
+
+        let clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        let clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        
+        totalClicks++;
+        let hitSomething = false;
+
+        for (let i = targets.length - 1; i >= 0; i--) {
+            let t = targets[i];
+            let dist = Math.hypot(clientX - t.x, clientY - t.y);
+            
+            if (dist <= t.radius) {
+                hitSomething = true;
+                hits++;
+                score += 10;
+                playSound('hit');
+                ripples.push(new Ripple(t.x, t.y, t.color));
+                targets.splice(i, 1);
+                
+                let difficultyMultiplier = Math.max(0.4, Math.pow(0.98, score / 10)); 
+                currentSpawnInterval = baseSpawnInterval * difficultyMultiplier;
+                currentShrinkSpeed = baseShrinkSpeed * (1 + (score / 200));
+                
+                break;
+            }
+        }
+
+        if (!hitSomething) {
+            score = Math.max(0, score - 2);
+            playSound('miss');
+        }
+        
+        updateHUD();
+    }
+
+    canvas.addEventListener('mousedown', handleInteraction);
+    canvas.addEventListener('touchstart', handleInteraction, {passive: false});
+
+    function updateHUD() {
+        scoreDisplay.innerText = score;
+        timeDisplay.innerText = Math.ceil(timeLeft);
+        let accuracy = totalClicks === 0 ? 100 : Math.round((hits / totalClicks) * 100);
+        accuracyDisplay.innerText = accuracy;
+    }
+
+    // Main Game Loop
+    function loop(timestamp) {
+        if (!isPlaying || isPaused) return;
+
+        let dt = timestamp - lastTime;
+        lastTime = timestamp;
+
+        gameTimer += dt;
+        if (gameTimer >= 1000) {
+            timeLeft -= 1;
+            gameTimer -= 1000;
+            updateHUD();
+            
+            if (timeLeft <= 0) {
+                endGame();
+                return;
+            }
+        }
+
+        spawnTimer += dt;
+        if (spawnTimer >= currentSpawnInterval) {
+            spawnTimer = 0;
+            spawnTarget();
+        }
+
+        ctx.clearRect(0, 0, width, height);
+
+        for (let i = targets.length - 1; i >= 0; i--) {
+            targets[i].update(dt);
+            if (targets[i].isDead) {
+                targets.splice(i, 1);
+            } else {
+                targets[i].draw(ctx);
+            }
+        }
+
+        for (let i = ripples.length - 1; i >= 0; i--) {
+            ripples[i].update(dt);
+            if (ripples[i].isDead) {
+                ripples.splice(i, 1);
+            } else {
+                ripples[i].draw(ctx);
+            }
+        }
+
+        animationFrameId = requestAnimationFrame(loop);
+    }
+
+    function spawnTarget() {
+        const maxRadius = Math.max(30, Math.min(60, width * 0.08));
+        
+        // 限制生成范围，排除顶部UI区域和屏幕边缘
+        const minX = maxRadius;
+        const maxX = width - maxRadius;
+        const minY = uiSafeMarginTop + maxRadius; 
+        const maxY = height - maxRadius;
+        
+        const x = minX + Math.random() * (maxX - minX);
+        const y = minY + Math.random() * (maxY - minY);
+        
+        targets.push(new Target(x, y, maxRadius, currentShrinkSpeed));
+    }
+
+    // Button Events & Logic
+    difficultySlider.addEventListener('input', (e) => {
+        const diffTexts = ["简单", "普通", "困难"];
+        diffValDisplay.innerText = diffTexts[e.target.value - 1];
+    });
+
+    function startGame() {
+        initAudio();
+        let diffLevel = parseInt(difficultySlider.value);
+        
+        if (diffLevel === 1) {
+            baseSpawnInterval = 800; baseShrinkSpeed = 20;
+        } else if (diffLevel === 2) {
+            baseSpawnInterval = 600; baseShrinkSpeed = 35;
+        } else {
+            baseSpawnInterval = 400; baseShrinkSpeed = 50;
+        }
+
+        currentSpawnInterval = baseSpawnInterval;
+        currentShrinkSpeed = baseShrinkSpeed;
+
+        score = 0;
+        timeLeft = 60;
+        totalClicks = 0;
+        hits = 0;
+        targets = [];
+        ripples = [];
+        gameTimer = 0;
+        spawnTimer = 0;
+        
+        updateHUD();
+        menu.classList.add('hidden');
+        pauseMenu.classList.add('hidden');
+        ingameControls.classList.remove('hidden');
+        
+        isPlaying = true;
+        isPaused = false;
+        lastTime = performance.now();
+        
+        if(animationFrameId) cancelAnimationFrame(animationFrameId);
+        animationFrameId = requestAnimationFrame(loop);
+    }
+
+    function endGame() {
+        isPlaying = false;
+        ingameControls.classList.add('hidden');
+        
+        let accuracy = totalClicks === 0 ? 0 : Math.round((hits / totalClicks) * 100);
+        
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('precisionHighScore', highScore);
+            highScoreDisplay.innerText = highScore;
+        }
+
+        finalScoreDisplay.innerText = score;
+        finalAccuracyDisplay.innerText = accuracy;
+        gameOverScreen.classList.remove('hidden');
+        menu.classList.remove('hidden');
+        
+        ctx.clearRect(0, 0, width, height);
+    }
+
+    // 暂停逻辑
+    pauseBtn.addEventListener('click', () => {
+        if(!isPlaying || isPaused) return;
+        isPaused = true;
+        pauseMenu.classList.remove('hidden');
+    });
+
+    resumeBtn.addEventListener('click', () => {
+        if(!isPlaying || !isPaused) return;
+        pauseMenu.classList.add('hidden');
+        isPaused = false;
+        lastTime = performance.now(); // 修正时间，防止恢复时瞬间扣除大量时间
+        animationFrameId = requestAnimationFrame(loop);
+    });
+
+    restartBtn.addEventListener('click', startGame);
+
+    mainMenuBtn.addEventListener('click', () => {
+        isPlaying = false;
+        isPaused = false;
+        pauseMenu.classList.add('hidden');
+        ingameControls.classList.add('hidden');
+        gameOverScreen.classList.add('hidden'); // 隐藏结算信息
+        menu.classList.remove('hidden');
+        ctx.clearRect(0, 0, width, height);
+    });
+
+    soundBtn.addEventListener('click', () => {
+        isSoundEnabled = !isSoundEnabled;
+        soundBtn.innerText = isSoundEnabled ? "音效: 开" : "音效: 关";
+    });
+
+    startBtn.addEventListener('click', startGame);
+
+</script>
+</body>
+</html>
