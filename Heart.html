@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>粉色比心粒子跳动</title>
+  <style>
+    :root{
+      --pink1:#ffb6c1; /* 浅粉 */
+      --pink2:#ff69b4; /* 深粉 */
+      --bg1:#0b0a12;
+      --bg2:#1a0f22;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; margin:0; }
+    body{
+      overflow:hidden;
+      background:
+        radial-gradient(1200px 800px at 50% 35%, rgba(255,182,193,.14), transparent 55%),
+        radial-gradient(1000px 700px at 50% 60%, rgba(255,105,180,.10), transparent 60%),
+        radial-gradient(900px 700px at 50% 50%, var(--bg2), var(--bg1) 65%);
+      display:grid;
+      place-items:center;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      color:#fff;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* 容器：心形 + 粒子canvas 同步缩放，确保粒子“贴”在心上 */
+    .stage{
+      position:relative;
+      width:min(62vmin, 520px);
+      aspect-ratio: 1 / 1;
+      display:grid;
+      place-items:center;
+
+      /* 双峰心跳：一次周期约1秒
+         - 先快速收缩到 0.80
+         - 回到 1.00 并过冲到 1.05
+         - 再来一次小收缩/回弹形成“双峰” */
+      animation: heartbeat 1.05s infinite;
+      will-change: transform;
+      transform-origin: 50% 55%;
+      filter: drop-shadow(0 18px 28px rgba(255,105,180,.22));
+    }
+
+    @keyframes heartbeat{
+      0%   { transform: scale(1); }
+      10%  { transform: scale(0.80); } /* 收缩（快） */
+      18%  { transform: scale(1.00); } /* 舒张 */
+      26%  { transform: scale(1.05); } /* 轻微过冲 */
+      34%  { transform: scale(1.00); } /* 回弹 */
+      46%  { transform: scale(0.92); } /* 第二峰：小收缩 */
+      56%  { transform: scale(1.02); } /* 小过冲 */
+      66%  { transform: scale(1.00); } /* 稳定 */
+      100% { transform: scale(1.00); }
+    }
+
+    /* 心形主体：用数学参数方程生成的 SVG Path（标准心形曲线） */
+    .heart{
+      width: 70%;
+      aspect-ratio: 1/1;
+      position:relative;
+      z-index: 2;
+      pointer-events:none;
+
+      /* 霓虹般柔光 */
+      filter:
+        drop-shadow(0 10px 18px rgba(255,105,180,.35))
+        drop-shadow(0 0 22px rgba(255,182,193,.22));
+    }
+
+    /* 粒子画布：覆盖在心形之上（随 .stage 缩放） */
+    canvas{
+      position:absolute;
+      inset:0;
+      z-index: 3;
+      width:100%;
+      height:100%;
+      pointer-events:none;
+    }
+
+    /* 为了增强立体感，额外叠一层微弱的高光与暗角 */
+    .sheen{
+      position:absolute;
+      inset: 14%;
+      z-index: 4;
+      pointer-events:none;
+      mix-blend-mode: screen;
+      opacity:.55;
+      background:
+        radial-gradient(60% 55% at 35% 28%, rgba(255,255,255,.55), rgba(255,255,255,0) 58%),
+        radial-gradient(70% 70% at 70% 75%, rgba(255,105,180,.18), rgba(0,0,0,0) 60%);
+      filter: blur(8px);
+      clip-path: path("M 50 18 C 44 8 30 5 22 14 C 14 23 16 37 26 45 C 35 52 43 58 50 70 C 57 58 65 52 74 45 C 84 37 86 23 78 14 C 70 5 56 8 50 18 Z");
+    }
+
+    /* 适配“减少动态”偏好：保留静态发光与轻粒子 */
+    @media (prefers-reduced-motion: reduce){
+      .stage{ animation:none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stage" id="stage" aria-hidden="true">
+    <!-- SVG 心形：通过参数方程采样生成 path（在 JS 内生成更严格的数学心形）
+         这里先提供一条“标准对称心形”路径作为剪裁/保险显示（fill 渐变 + 内阴影） -->
+    <svg class="heart" viewBox="0 0 200 200" role="img" aria-label="粉色心形">
+      <defs>
+        <!-- 心形主渐变：浅粉到深粉，略带高光 -->
+        <linearGradient id="heartGrad" x1="25%" y1="10%" x2="80%" y2="90%">
+          <stop offset="0%"  stop-color="#ffd1dc"/>
+          <stop offset="30%" stop-color="#ffb6c1"/>
+          <stop offset="70%" stop-color="#ff7eb6"/>
+          <stop offset="100%" stop-color="#ff69b4"/>
+        </linearGradient>
+
+        <!-- 轻微内阴影：增强立体感 -->
+        <filter id="innerShadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feFlood flood-color="rgba(0,0,0,.35)" result="flood"/>
+          <feComposite in="flood" in2="SourceAlpha" operator="in" result="shadowIn"/>
+          <feGaussianBlur in="shadowIn" stdDeviation="5" result="blur"/>
+          <feOffset in="blur" dx="0" dy="6" result="offsetBlur"/>
+          <feComposite in="offsetBlur" in2="SourceGraphic" operator="over" result="comp1"/>
+          <!-- 高光（轻） -->
+          <feColorMatrix in="SourceGraphic" type="matrix"
+            values="1 0 0 0 0
+                    0 1 0 0 0
+                    0 0 1 0 0
+                    0 0 0 1 0" result="src"/>
+          <feGaussianBlur in="src" stdDeviation="0.2" result="soft"/>
+          <feMerge>
+            <feMergeNode in="comp1"/>
+            <feMergeNode in="soft"/>
+          </feMerge>
+        </filter>
+      </defs>
+
+      <!-- 使用一条对称心形轮廓（填充） -->
+      <path id="heartPathSvg"
+            d="M100,28
+               C78,8 45,14 40,42
+               C34,73 63,90 100,122
+               C137,90 166,73 160,42
+               C155,14 122,8 100,28 Z"
+            fill="url(#heartGrad)"
+            filter="url(#innerShadow)"/>
+    </svg>
+
+    <canvas id="fx"></canvas>
+    <div class="sheen"></div>
+  </div>
+
+  <script>
+    (() => {
+      const stage = document.getElementById('stage');
+      const canvas = document.getElementById('fx');
+      const ctx = canvas.getContext('2d', { alpha: true });
+
+      // =========================
+      // 数学心形（参数方程）采样
+      // x = 16 sin^3(t)
+      // y = 13 cos(t) - 5 cos(2t) - 2 cos(3t) - cos(4t)
+      // 该曲线是经典“标准心形曲线”，对称且平滑。
+      // =========================
+      function buildHeartPoints(count = 420) {
+        const pts = [];
+        for (let i = 0; i < count; i++) {
+          const t = (i / count) * Math.PI * 2;
+          const s = Math.sin(t);
+          const c = Math.cos(t);
+          const x = 16 * s * s * s;
+          const y = 13 * c - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+          pts.push({ x, y });
+        }
+
+        // 归一化到 [-1,1] 的大致范围，方便映射到画布
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const p of pts) {
+          if (p.x < minX) minX = p.x;
+          if (p.x > maxX) maxX = p.x;
+          if (p.y < minY) minY = p.y;
+          if (p.y > maxY) maxY = p.y;
+        }
+        const scaleX = 2 / (maxX - minX);
+        const scaleY = 2 / (maxY - minY);
+        const cx = (minX + maxX) / 2;
+        const cy = (minY + maxY) / 2;
+
+        for (const p of pts) {
+          p.x = (p.x - cx) * scaleX;     // ~[-1,1]
+          p.y = (p.y - cy) * scaleY;     // ~[-1,1]
+          // 注意：画布 y 方向向下，稍后绘制时会反转以保持“心尖向下”
+        }
+        return pts;
+      }
+
+      const heartPts = buildHeartPoints(520);
+
+      // 生成一个点在心形边缘的“法线方向”（用于向外喷发）
+      // 通过相邻点差近似切线，再旋转得到法线。
+      function sampleHeartEdge() {
+        const i = (Math.random() * heartPts.length) | 0;
+        const p0 = heartPts[(i - 1 + heartPts.length) % heartPts.length];
+        const p1 = heartPts[i];
+        const p2 = heartPts[(i + 1) % heartPts.length];
+
+        const tx = p2.x - p0.x;
+        const ty = p2.y - p0.y;
+        // 法线 = ( -ty, tx )
+        let nx = -ty, ny = tx;
+        const nlen = Math.hypot(nx, ny) || 1;
+        nx /= nlen; ny /= nlen;
+
+        // 让“向外”更稳定：由于曲线方向不一致，使用从中心指向点的方向与法线混合
+        const ox = p1.x, oy = p1.y; // 心形中心约在(0,0)
+        const olen = Math.hypot(ox, oy) || 1;
+        const cx = ox / olen, cy = oy / olen;
+
+        // 混合（更像从表面向外扩散）
+        nx = nx * 0.55 + cx * 0.85;
+        ny = ny * 0.55 + cy * 0.85;
+        const mlen = Math.hypot(nx, ny) || 1;
+        nx /= mlen; ny /= mlen;
+
+        return { p: p1, n: { x: nx, y: ny } };
+      }
+
+      // =========================
+      // 粒子系统
+      // 设计目标：
+      // 1) 持续从心形边缘/内部生成微粒
+      // 2) 向外扩散并略带“浮力上升 + 微重力下沉的摆动感”
+      // 3) 随时间透明度衰减，带柔光
+      // =========================
+      const particles = [];
+      const MAX_PARTICLES = 900;
+
+      function rand(a, b) { return a + Math.random() * (b - a); }
+      function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+
+      function pinkColor() {
+        // 在粉/白之间微调，避免荧光，保持高级柔和
+        const t = Math.random();
+        const r = Math.round(255);
+        const g = Math.round(190 + 45 * (1 - t)); // 190~235
+        const b = Math.round(210 + 35 * t);       // 210~245
+        const a = rand(0.35, 0.95);
+        return `rgba(${r},${g},${b},${a})`;
+      }
+
+      function resize() {
+        const dpr = Math.min(2, window.devicePixelRatio || 1); // 控制DPR上限，兼顾性能
+        const rect = stage.getBoundingClientRect();
+        canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+        canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+        canvas._dpr = dpr;
+      }
+
+      const ro = new ResizeObserver(resize);
+      ro.observe(stage);
+      resize();
+
+      let last = performance.now();
+      let emitAcc = 0;
+
+      // 从心形“局部坐标”映射到画布像素坐标
+      function heartToCanvas(x, y) {
+        // 让心形在画布中占比与 SVG 相近：70%宽度
+        const dpr = canvas._dpr || 1;
+        const w = canvas.width, h = canvas.height;
+        const size = Math.min(w, h) * 0.38; // 心形半径比例（调参）
+        const cx = w * 0.5;
+        const cy = h * 0.53;
+
+        // y 反转（使心尖向下）
+        return {
+          x: cx + x * size,
+          y: cy - y * size
+        };
+      }
+
+      function spawn(dt) {
+        // 发射速率与帧率无关：用累加器
+        // 基础每秒粒子数：约 140~220（随节奏微抖动）
+        const baseRate = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 70 : 180;
+        emitAcc += dt * baseRate;
+
+        const toEmit = Math.min(8, emitAcc | 0);
+        emitAcc -= toEmit;
+
+        for (let i = 0; i < toEmit; i++) {
+          if (particles.length >= MAX_PARTICLES) particles.shift();
+
+          const edge = Math.random() < 0.78; // 多数从边缘，少量从内部
+          let x, y, nx, ny;
+
+          if (edge) {
+            const s = sampleHeartEdge();
+            x = s.p.x; y = s.p.y;
+            nx = s.n.x; ny = s.n.y;
+          } else {
+            // 内部：取边缘点缩放到内部（近似在心形内）
+            const s = sampleHeartEdge();
+            const k = rand(0.15, 0.65);
+            x = s.p.x * k; y = s.p.y * k;
+            // 内部粒子更像“呼吸”扩散
+            nx = s.n.x * rand(0.4, 0.9);
+            ny = s.n.y * rand(0.4, 0.9);
+          }
+
+          const pos = heartToCanvas(x, y);
+
+          // 速度：沿法线外扩，叠加轻微旋涡扰动
+          const speed = rand(18, 70) * (canvas._dpr || 1);
+          const swirl = rand(-26, 26) * (canvas._dpr || 1);
+
+          // 加一点“浮力”与“重力”混合：总体微微上扬（梦幻），但不脱离物理直觉
+          const buoy = rand(-18, -55) * (canvas._dpr || 1); // 负值：向上
+          const grav = rand(10, 26) * (canvas._dpr || 1);   // 正值：向下（后续加速度）
+
+          const size = rand(0.8, 2.6) * (canvas._dpr || 1);
+          const life = rand(0.75, 1.55); // 秒
+          const fadeIn = rand(0.04, 0.12);
+
+          particles.push({
+            x: pos.x,
+            y: pos.y,
+            vx: nx * speed + (-ny) * swirl * 0.10,
+            vy: ny * speed + ( nx) * swirl * 0.10 + buoy * 0.20,
+            ax: rand(-6, 6) * (canvas._dpr || 1), // 轻微扰动
+            ay: grav,                              // 轻微重力
+            r: size,
+            life,
+            age: 0,
+            fadeIn,
+            color: pinkColor(),
+            glow: rand(6, 18) * (canvas._dpr || 1)
+          });
+        }
+      }
+
+      function draw(dt) {
+        const w = canvas.width, h = canvas.height;
+
+        // 轻微拖影：用低 alpha 覆盖实现“柔和残影”
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = 'rgba(8, 6, 14, 0.12)'; // 数值越小拖影越长
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+
+        // 粒子叠加：screen 更梦幻（亮部叠加）
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.age += dt;
+          if (p.age >= p.life) {
+            particles.splice(i, 1);
+            continue;
+          }
+
+          // 物理更新：速度 + 加速度
+          // 关键：用 dt 保持不同帧率一致
+          p.vx += p.ax * dt;
+          p.vy += p.ay * dt;
+          p.x  += p.vx * dt;
+          p.y  += p.vy * dt;
+
+          // 透明度：先快速淡入，再缓慢淡出（高级感更“柔”）
+          const t = p.age / p.life;
+          const fin = clamp01(p.age / p.fadeIn);
+          const fout = 1 - Math.pow(t, 1.6);
+          const alpha = fin * fout;
+
+          // 粒子略微收缩，像能量消散
+          const rr = p.r * (0.95 + 0.25 * (1 - t));
+
+          // 绘制带辉光的圆点（用 shadowBlur）
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = p.glow;
+          ctx.fillStyle = p.color;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, rr, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      // 心跳同步：根据动画相位微调发射强度（双峰时粒子更活跃）
+      // 做法：读取 CSS 动画时间（performance.now）并用两次高斯/峰值函数混合
+      function beatBoost(tSec) {
+        // 约 1.05s 周期
+        const T = 1.05;
+        const ph = (tSec % T) / T;
+
+        // 两个峰：约在 0.10 和 0.46（对应 keyframes 的两次收缩附近）
+        const peak = (x, mu, s) => Math.exp(-0.5 * ((x - mu) / s) ** 2);
+        const a = peak(ph, 0.10, 0.06);
+        const b = peak(ph, 0.46, 0.08);
+        return 0.75 + 1.1 * (a + 0.75 * b); // 0.75~约2.5
+      }
+
+      let rafId = 0;
+      function frame(now) {
+        const dt = Math.min(0.033, (now - last) / 1000);
+        last = now;
+
+        // 根据心跳相位提升发射率（不直接改 CSS，而是改粒子发射）
+        const boost = beatBoost(now / 1000);
+
+        // 通过临时提高 emitAcc 的积累速度，实现“随心跳喷发”
+        // 中文注释：这里相当于让“每秒粒子数”乘以 boost，从而在收缩时更明显
+        emitAcc += dt * 110 * (boost - 1);
+
+        spawn(dt);
+        draw(dt);
+
+        rafId = requestAnimationFrame(frame);
+      }
+
+      // 初始化：先清空一帧背景
+      ctx.fillStyle = 'rgba(8, 6, 14, 1)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      rafId = requestAnimationFrame(frame);
+
+      // 资源释放：避免内存泄漏（如在 SPA/嵌入环境中卸载）
+      window.addEventListener('pagehide', () => {
+        cancelAnimationFrame(rafId);
+        ro.disconnect();
+        particles.length = 0;
+      }, { once: true });
+
+      // 点击/触摸：在点击位置额外爆一波粒子（增强交互，仍然零依赖）
+      function burst(clientX, clientY) {
+        const rect = stage.getBoundingClientRect();
+        const dpr = canvas._dpr || 1;
+        const x0 = (clientX - rect.left) * dpr;
+        const y0 = (clientY - rect.top) * dpr;
+
+        const n = 70;
+        for (let i = 0; i < n; i++) {
+          if (particles.length >= MAX_PARTICLES) particles.shift();
+
+          const ang = rand(0, Math.PI * 2);
+          const sp  = rand(40, 160) * dpr;
+          const size = rand(0.9, 2.8) * dpr;
+
+          particles.push({
+            x: x0,
+            y: y0,
+            vx: Math.cos(ang) * sp,
+            vy: Math.sin(ang) * sp - rand(30, 110) * dpr,
+            ax: rand(-14, 14) * dpr,
+            ay: rand(22, 40) * dpr,
+            r: size,
+            life: rand(0.7, 1.35),
+            age: 0,
+            fadeIn: rand(0.03, 0.08),
+            color: Math.random() < 0.15 ? `rgba(255,255,255,${rand(0.55,0.95)})` : pinkColor(),
+            glow: rand(10, 26) * dpr
+          });
+        }
+      }
+
+      stage.addEventListener('pointerdown', (e) => {
+        burst(e.clientX, e.clientY);
+      });
+    })();
+  </script>
+</body>
+</html>
