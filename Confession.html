@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>陈雨萱，你愿意做我女朋友吗？</title>
+  <style>
+    :root{
+      --pink-1:#fff0f6;
+      --pink-2:#ffd6e7;
+      --pink-3:#ff9ec7;
+      --pink-4:#ff5fa2;
+      --text:#4a2140;
+      --card: rgba(255,255,255,.72);
+      --shadow: 0 20px 60px rgba(255, 95, 162, .22);
+      --radius: 20px;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB",
+                   "Microsoft YaHei", "Noto Sans CJK SC", Arial, sans-serif;
+      color:var(--text);
+      overflow:hidden;
+      background:
+        radial-gradient(1200px 700px at 15% 20%, rgba(255, 95, 162, .18), transparent 55%),
+        radial-gradient(900px 600px at 85% 25%, rgba(255, 158, 199, .22), transparent 60%),
+        radial-gradient(1100px 800px at 50% 95%, rgba(255, 214, 231, .55), transparent 60%),
+        linear-gradient(180deg, var(--pink-1), #fff 60%, var(--pink-1));
+    }
+
+    /* 浪漫漂浮爱心 */
+    .hearts{
+      position:fixed; inset:0;
+      pointer-events:none;
+      overflow:hidden;
+      filter: drop-shadow(0 10px 18px rgba(255,95,162,.20));
+      opacity:.9;
+    }
+    .heart{
+      position:absolute;
+      width:14px; height:14px;
+      transform: rotate(45deg);
+      background: linear-gradient(135deg, rgba(255,95,162,.9), rgba(255,158,199,.9));
+      animation: floatUp linear forwards;
+      border-radius: 3px;
+    }
+    .heart:before, .heart:after{
+      content:"";
+      position:absolute;
+      width:14px; height:14px;
+      border-radius: 50%;
+      background: inherit;
+    }
+    .heart:before{ left:-7px; top:0; }
+    .heart:after{ left:0; top:-7px; }
+
+    @keyframes floatUp{
+      from { transform: translateY(0) rotate(45deg) scale(1); opacity: 0; }
+      10% { opacity: .95; }
+      to   { transform: translateY(-120vh) rotate(45deg) scale(1.6); opacity: 0; }
+    }
+
+    /* 主体布局 */
+    .wrap{
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+    }
+
+    .stage{
+      width:min(920px, 100%);
+      min-height: 72vh;
+      position:relative;
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.35));
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255, 158, 199, .35);
+      overflow:hidden;
+      backdrop-filter: blur(10px);
+    }
+
+    .stage::before{
+      content:"";
+      position:absolute; inset:-80px;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255, 95, 162, .18), transparent 35%),
+        radial-gradient(circle at 70% 30%, rgba(255, 158, 199, .22), transparent 40%),
+        radial-gradient(circle at 50% 80%, rgba(255, 214, 231, .45), transparent 45%);
+      filter: blur(2px);
+    }
+
+    .content{
+      position:relative;
+      padding: clamp(22px, 4vw, 44px);
+      display:flex;
+      flex-direction:column;
+      gap: 14px;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      min-height: 72vh;
+    }
+
+    .title{
+      font-weight: 900;
+      letter-spacing: .5px;
+      font-size: clamp(28px, 4.8vw, 54px);
+      line-height: 1.12;
+      margin: 0;
+      text-shadow: 0 10px 35px rgba(255, 95, 162, .18);
+    }
+
+    .subtitle{
+      margin: 0;
+      font-size: clamp(14px, 2.3vw, 18px);
+      opacity: .85;
+    }
+
+    .hint{
+      margin-top: 8px;
+      font-size: 13px;
+      opacity: .65;
+    }
+
+    /* 弹窗（可移动） */
+/* 弹窗（可移动）——改为按内容收缩宽度 */
+.modal{
+  position:absolute;
+  left: 50%;
+  top: 56%;
+  transform: translate(-50%, -50%);
+
+  /* 关键：不要再用 min(420px, ...) 这种固定大宽度 */
+  width: fit-content;
+  max-width: calc(100% - 44px); /* 小屏留边距，避免溢出 */
+  display: inline-block;
+
+  border-radius: 18px;
+  background: rgba(255,255,255,.72);
+  border: 1px solid rgba(255, 95, 162, .25);
+  box-shadow: 0 18px 55px rgba(90, 20, 60, .14);
+  backdrop-filter: blur(12px);
+  padding: 14px 12px 12px;
+  user-select:none;
+}
+
+  .modal h2{
+    margin: 4px 8px 8px;
+    font-size: clamp(16px, 2.6vw, 20px); /* 略小一点 */
+    letter-spacing: .2px;
+  }
+  .modal p{
+    margin: 0 8px 12px;
+    font-size: 13px;                     /* 原来 14px */
+    opacity: .78;
+    line-height: 1.6;
+  }
+
+  button{
+    border:0;
+    border-radius: 999px;
+    padding: 10px 14px;            
+    font-size: 14px;              
+    font-weight: 700;
+    cursor:pointer;
+    transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+    min-width: 116px;             
+    touch-action: manipulation;
+  }
+    button:active{ transform: translateY(1px) scale(.99); }
+
+    .yes{
+      color:white;
+      background: linear-gradient(135deg, var(--pink-4), var(--pink-3));
+      box-shadow: 0 14px 30px rgba(255, 95, 162, .26);
+    }
+    .yes:hover{ filter: brightness(1.03); }
+
+    .no{
+      color: #6b2b52;
+      background: linear-gradient(135deg, rgba(255,255,255,.9), rgba(255, 214, 231, .75));
+      box-shadow: 0 12px 26px rgba(255, 158, 199, .18);
+      border: 1px solid rgba(255, 95, 162, .22);
+    }
+
+    .success{
+      display:none;
+      width: min(760px, 100%);
+      border-radius: 26px;
+      padding: clamp(20px, 4vw, 34px);
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(255, 95, 162, .20);
+      box-shadow: 0 18px 60px rgba(255, 95, 162, .18);
+      backdrop-filter: blur(10px);
+    }
+
+    .success .big{
+      margin: 0;
+      font-weight: 950;
+      font-size: clamp(22px, 4.2vw, 40px);
+      line-height: 1.2;
+      background: linear-gradient(90deg, #ff3f8d, #ff7ab7, #ff3f8d);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .success .small{
+      margin: 12px 0 0;
+      opacity: .78;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      margin-top: 18px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 95, 162, .22);
+      background: rgba(255, 214, 231, .45);
+      font-weight: 700;
+      font-size: 13px;
+      opacity: .9;
+    }
+    .dot{
+      width:10px;height:10px;border-radius:50%;
+      background: #ff4f99;
+      box-shadow: 0 0 0 6px rgba(255, 79, 153, .18);
+    }
+
+@media (max-width: 420px){
+  .modal{
+
+    width: fit-content;  
+    max-width: calc(100% - 48px); 
+    left: 50%;
+    top: 60%;
+    transform: translate(-50%, -50%);
+    padding: 12px 10px 10px;
+  }
+
+  .btns{
+    gap: 10px;
+    display: flex; 
+    justify-content: center;
+  }
+
+  button{
+    min-width: 0;
+    flex: 0 0 auto;  
+    padding: 10px 10px;
+    font-size: 13px;
+  }
+}
+
+  
+}
+  </style>
+</head>
+
+<body>
+  <div class="hearts" id="hearts" aria-hidden="true"></div>
+
+  <div class="wrap">
+    <div class="stage" id="stage">
+      <div class="content" id="content">
+        <h1 class="title" id="mainTitle">陈雨萱，你愿意做我女朋友吗？</h1>
+        <p class="subtitle">陈雨萱，我喜欢你，我想把所有的温柔和偏爱，都给你。</p>
+
+        <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="求婚弹窗">
+          <h2>给我一个机会，好吗？</h2>
+          <div class="btns">
+            <button class="yes" id="btnYes">好</button>
+            <button class="no" id="btnNo">不好</button>
+          </div>
+        </div>
+
+        <div class="success" id="success">
+          <p class="big">恭喜！李金强和陈雨萱正式成为恋人啦！</p>
+          <p class="small">
+            以后你的开心我负责，你的难过我陪你。<br/>
+            我们慢慢来，但一定会很坚定。
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const stage = document.getElementById('stage');
+    const modal = document.getElementById('modal');
+    const btnNo = document.getElementById('btnNo');
+    const btnYes = document.getElementById('btnYes');
+    const success = document.getElementById('success');
+    const mainTitle = document.getElementById('mainTitle');
+    const hearts = document.getElementById('hearts');
+
+    // 生成漂浮爱心
+    function spawnHeart(){
+      const h = document.createElement('div');
+      h.className = 'heart';
+      const size = 10 + Math.random() * 18;
+      h.style.width = size + 'px';
+      h.style.height = size + 'px';
+
+      const left = Math.random() * 100;
+      h.style.left = left + 'vw';
+      h.style.bottom = (-20 - Math.random() * 20) + 'px';
+
+      const dur = 5 + Math.random() * 4.5;
+      h.style.animationDuration = dur + 's';
+
+      const delay = Math.random() * 0.6;
+      h.style.animationDelay = delay + 's';
+
+      const alpha = 0.45 + Math.random() * 0.5;
+      h.style.opacity = alpha;
+
+      hearts.appendChild(h);
+      const ttl = (dur + delay) * 1000 + 200;
+      setTimeout(()=> h.remove(), ttl);
+    }
+
+    let heartTimer = setInterval(spawnHeart, 240);
+
+    // 将 modal 移动到 stage 可视范围内的随机位置（不跑出边界）
+    function moveModalWithinStage(){
+      const sRect = stage.getBoundingClientRect();
+      const mRect = modal.getBoundingClientRect();
+
+      // 预留一点边距，避免贴边太难点
+      const padding = 12;
+
+      const maxLeft = sRect.width - mRect.width - padding;
+      const maxTop  = sRect.height - mRect.height - padding;
+
+      // 如果空间不足，就不乱跑（极端小屏/横屏）
+      if (maxLeft <= padding || maxTop <= padding) return;
+
+      // 随机位置
+      const left = padding + Math.random() * (maxLeft - padding);
+      const top  = padding + Math.random() * (maxTop - padding);
+
+      // 直接用 stage 内定位，取消 translate 居中
+      modal.style.transform = 'none';
+      modal.style.left = left + 'px';
+      modal.style.top  = top + 'px';
+    }
+
+    // “不同意”行为：移动弹窗 + 轻微抖动
+    function dodge(){
+      moveModalWithinStage();
+      modal.animate(
+        [
+          { transform: 'translateX(0px)' },
+          { transform: 'translateX(-6px)' },
+          { transform: 'translateX(6px)' },
+          { transform: 'translateX(0px)' }
+        ],
+        { duration: 180, easing: 'ease-out' }
+      );
+    }
+
+    btnNo.addEventListener('click', (e) => {
+      e.preventDefault();
+      dodge();
+    });
+
+    // 让“不同意”在桌面端更难点：鼠标靠近也会躲
+    btnNo.addEventListener('mouseenter', () => {
+      // 仅在指针精确设备上启用（避免手机误触）
+      if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        dodge();
+      }
+    });
+
+    // “同意”行为：切换内容 + 更浓的爱心雨
+    btnYes.addEventListener('click', (e) => {
+      e.preventDefault();
+
+      modal.style.display = 'none';
+      mainTitle.textContent = '耶！那从现在开始，我就是你的男朋友啦。';
+      success.style.display = 'block';
+
+      // 加强爱心效果
+      clearInterval(heartTimer);
+      heartTimer = setInterval(spawnHeart, 90);
+
+      // 小小庆祝抖动
+      success.animate(
+        [
+          { transform: 'scale(0.98)', opacity: 0.4 },
+          { transform: 'scale(1.02)', opacity: 1 },
+          { transform: 'scale(1)', opacity: 1 }
+        ],
+        { duration: 420, easing: 'cubic-bezier(.2,.8,.2,1)' }
+      );
+    });
+
+    // 屏幕变化时，确保弹窗还在范围内（特别是旋转屏幕）
+    window.addEventListener('resize', () => {
+      // 如果还在显示，尝试“归位到安全区”
+      if (modal.style.display !== 'none') {
+        // 若已被设置为随机定位，则确保不会越界；不然保持默认居中
+        if (modal.style.transform === 'none') moveModalWithinStage();
+      }
+    });
+
+    // 首次加载：预生成少量爱心，让画面不空
+    for (let i = 0; i < 14; i++) setTimeout(spawnHeart, i * 80);
+  </script>
+</body>
+</html>
