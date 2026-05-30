@@ -231,10 +231,24 @@
     }
 
     /* 小屏优化 */
-    @media (max-width: 420px){
-      button{ min-width: 46%; padding: 12px 14px; }
-      .modal{ top: 60%; }
-    }
+@media (max-width: 420px){
+  .modal{
+    width: min(360px, calc(100% - 48px));
+    padding: 12px 10px 10px;
+    top: 60%;
+  }
+
+  .btns{
+    gap: 10px;
+  }
+
+  button{
+    min-width: 0;              /* 不要再用 46% 撑大 */
+    flex: 1 1 0;               /* 两个按钮均分一行 */
+    padding: 10px 10px;        /* 缩小高度 */
+    font-size: 13px;           /* 字体缩小 */
+  }
+}
   </style>
 </head>
 
